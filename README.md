@@ -105,9 +105,9 @@ vanilla JS — no framework, no build step, no CDN) embedded in flash via
 program-level progress, quick actions with running-state locking,
 program editor, timing/presets, manual relays (advanced, collapsed),
 browser OTA upload and live log — all over the ESPHome REST API with
-`/events` SSE push. Protected by digest auth (`web_username` /
-`web_password` in secrets.yaml). ~8 KB gzipped vs ~140 KB for the stock
-frontend. `ui/mock-server.py` fakes the device API for offline UI
+`/events` SSE push. No auth by default (trusted local WiFi); a digest-auth block is
+commented in the yaml if you ever want it. ~8 KB gzipped vs ~140 KB for
+the stock frontend. `ui/mock-server.py` fakes the device API for offline UI
 testing.
 
 ## Getting started

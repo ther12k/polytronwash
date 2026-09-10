@@ -133,10 +133,8 @@ web_server:
   # the stock frontend. No CDN, no internet needed. ~8 KB gzipped vs 142 KB stock.
   js_include: ui/www.js
   js_url: ""
-  auth:
-    username: !secret web_username
-    password: !secret web_password
-    type: digest
+  # Local WiFi only — no auth. To lock it down later, add:
+  #   auth: { username: !secret web_username, password: !secret web_password, type: digest }
   sorting_groups:
     - id: grp_status
       name: "Cycle Status"
