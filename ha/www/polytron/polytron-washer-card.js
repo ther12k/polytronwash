@@ -6,9 +6,11 @@ class PolytronWasherCard extends HTMLElement {
       program: "sensor.polytron_washing_machine_current_program",
       running: "binary_sensor.polytron_washing_machine_cycle_running",
       state: "sensor.polytron_washing_machine_cycle_state",
-      progress: "sensor.polytron_washing_machine_cycle_progress",
-      elapsed: "sensor.polytron_washing_machine_cycle_elapsed",
-      remaining: "sensor.polytron_washing_machine_cycle_remaining",
+      // whole-program entities (ring matches the device web UI; new sensors
+      // landed under HA's ruang_cuci_ device prefix)
+      progress: "sensor.ruang_cuci_polytron_washing_machine_program_progress",
+      elapsed: "sensor.ruang_cuci_polytron_washing_machine_program_elapsed",
+      remaining: "sensor.ruang_cuci_polytron_washing_machine_program_remaining",
       drain: "switch.polytron_washing_machine_drain_clutch",
       motor_a: "switch.polytron_washing_machine_motor_a",
       motor_b: "switch.polytron_washing_machine_motor_b",

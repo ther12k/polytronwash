@@ -57,6 +57,7 @@ const ENTITIES = Object.freeze({
     progElapsed: "sensor/Program Elapsed",
     progRemaining: "sensor/Program Remaining",
     heap: "sensor/Free Heap",
+    rssi: "sensor/WiFi Signal",
   },
 });
 
@@ -215,6 +216,8 @@ function derived() {
     elapsed: fmtSec(st("progElapsed")),
     remaining: fmtSec(st("progRemaining")),
     heap: st("heap"),
+    rssi: ["unknown", "nan", ""].includes((st("rssi") || "").toLowerCase())
+      ? undefined : st("rssi"),
   };
 }
 
@@ -248,7 +251,8 @@ function renderApp() {
       <div class="cyc-row">
         <div class="kv"><span class="k">Elapsed</span><span class="v v-elapsed">—</span></div>
         <div class="kv"><span class="k">Remaining</span><span class="v v-remaining">—</span></div>
-        <div class="kv"><span class="k">Free heap</span><span class="v v-heap">${esc(D.heap ?? "—")} KB</span></div>
+        <div class="kv"><span class="k">Free heap</span><span class="v v-heap">${esc(D.heap ?? "—")}</span></div>
+        <div class="kv"><span class="k">WiFi</span><span class="v v-rssi">${esc(D.rssi ?? "—")}</span></div>
       </div>
     </div>`, "c-status");
 
@@ -379,7 +383,9 @@ function patchStatus(root, D) {
   q(".lab-step").textContent = D.running ? "step " + Math.round(D.stepPct) + "%" : "ready";
   q(".v-elapsed").textContent = D.running ? D.elapsed : "—";
   q(".v-remaining").textContent = D.running ? D.remaining : "—";
-  q(".v-heap").textContent = (D.heap ?? "—") + " KB";
+  // device state strings carry their unit ("231 KB", "-84 dBm")
+  q(".v-heap").textContent = D.heap ?? "—";
+  q(".v-rssi").textContent = D.rssi ?? "—";
 }
 
 function patchLocks(root, D) {

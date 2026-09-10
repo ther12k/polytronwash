@@ -967,3 +967,22 @@ sensor:
     icon: mdi:memory
     update_interval: 30s
     lambda: 'return (float) ESP.getFreeHeap() / 1024.0f;'
+
+  # WiFi signal strength — the radio link has been flaky (10-33% packet
+  # loss); watch RSSI live to place the board / antenna properly
+  - platform: template
+    name: "WiFi Signal"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 95
+    unit_of_measurement: "dBm"
+    device_class: signal_strength
+    accuracy_decimals: 0
+    update_interval: 30s
+    # -127 is the IDF "not connected yet" sentinel (first poll after boot
+    # races the STA info) — publish nothing instead of a bogus value
+    lambda: |-
+      const int8_t r = wifi::global_wifi_component->wifi_rssi();
+      if (r <= -120)
+        return {};
+      return (float) r;

@@ -123,7 +123,7 @@ taps or one voice command.
 - `number.*` — wash/spin/drain/fill minutes, wash pulse + dead time, spin coast seconds
 - `select.*` — wash preset, spin preset, spin direction (A/B)
 - `text.*` — the three editable program slots
-- `sensor.*` — cycle state, step + whole-program progress %, elapsed/remaining, free heap
+- `sensor.*` — cycle state, step + whole-program progress %, elapsed/remaining, free heap, WiFi signal (dBm)
 - `binary_sensor.*` — cycle running
 
 ## Home Assistant setup (`ha/`)
