@@ -29,7 +29,9 @@ class PolytronWasherCard extends HTMLElement {
       sel_spin: "select.polytron_washing_machine_spin_preset",
       t_quick: "text.polytron_washing_machine_program_quick",
       t_normal: "text.polytron_washing_machine_program_normal",
-      t_custom: "text.polytron_washing_machine_program_custom"
+      t_custom: "text.polytron_washing_machine_program_custom",
+      n_wash_on: "number.ruang_cuci_polytron_washing_machine_wash_pulse_seconds",
+      n_wash_dead: "number.ruang_cuci_polytron_washing_machine_wash_dead_time_seconds"
     }, cfg || {});
     this._tab = "home";
     this._prog = "quick";
@@ -267,11 +269,20 @@ class PolytronWasherCard extends HTMLElement {
       .nav{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;background:#fff;border-top:1px solid #e5e7eb;display:flex;z-index:9}
       .ntab{flex:1;text-align:center;padding:10px 0 12px;font-size:10px;font-weight:600;color:#9ca3af;cursor:pointer}
       .ntab.on{color:#1e88fe}.ntab .ni{display:block;font-size:18px;margin-bottom:2px}
+      @media (min-width: 768px){
+        .app{display:flex;flex-direction:column;max-width:1080px;padding-bottom:20px}
+        .nav{position:static;order:-1;width:100%;max-width:none;border-top:none;border-bottom:1px solid #e5e7eb;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:2px}
+        .ntab{padding:12px 0;font-size:12px}
+        .ntab.on{font-weight:800}
+        .content{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}
+        .content .card{margin-top:0}
+        .content > .btnrow{grid-column:1/-1;margin-top:0}
+      }
       @media (prefers-color-scheme: dark){.card{background:#1f2937;color:#f3f4f6}.chip,.mrow{background:#111827}.h3,.cs,.ek,.rs,.ms,.chip-s{color:#9ca3af}.step,.erow,.act,.hrow{border-color:#374151}.pm{background:#111827;border-color:#374151}.seg{background:#111827}.pr{background:#111827}.rbg{stroke:#374151}.nav{background:#111827;border-color:#374151}.ntab{color:#6b7280}.hpill.warn{background:#374151}.qa.r .qa-c{background:#7f1d1d}}
     </style>
     <div class="app">
       <div class="hdr"><div class="av">🧺</div><div class="ht"><div class="hn">${this._cfg.title}</div><div class="hs">${this._cfg.subtitle}</div><div class="online">● Online</div></div><div class="tag">Smarter Laundry<br>Happier Home</div></div>
-      ${tabContent}
+      <div class="content">${tabContent}</div>
       <div class="nav">${tabs.map(t => `<div class="ntab ${this._tab===t[0]||(t[0]==="home2"&&this._tab==="controls")?"on":""}" data-tab="${t[0]==="home2"?"controls":t[0]}"><span class="ni">${t[1]}</span>${t[2]}</div>`).join("")}</div>
     </div>`;
 
