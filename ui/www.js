@@ -435,11 +435,13 @@ function patchValues(root) {
   });
 }
 
+const LOG_HINT = "Log is quiet while the machine is idle — actions, warnings and errors appear here live.";
+
 function patchLog(root) {
   const log = root.getElementById("log");
   if (!log) return;
   const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
-  log.textContent = store.logs.join("\n");
+  log.textContent = store.logs.length ? store.logs.join("\n") : LOG_HINT;
   const follow = root.getElementById("log-follow");
   if (follow && follow.checked) log.scrollTop = log.scrollHeight;
   else if (!follow) log.scrollTop = atBottom ? log.scrollHeight : log.scrollTop;
@@ -486,7 +488,13 @@ function bindEvents(root) {
 
   root.querySelectorAll("[data-relay]").forEach((b) => {
     const name = ENTITIES.switch[b.dataset.relay];
-    b.addEventListener("click", () => api.setSwitch(name, !((store.states[`switch/${name}`] || {}).state === "ON")));
+    b.addEventListener("click", () => {
+      const cur = (store.states[`switch/${name}`] || {}).state === "ON";
+      // optimistic flip so rapid clicks can't desync before SSE confirms
+      store.states[`switch/${name}`] = { state: cur ? "OFF" : "ON", value: !cur };
+      patchValues(root);
+      api.setSwitch(name, !cur);
+    });
   });
 
   root.querySelectorAll(".stepper").forEach((s) =>
