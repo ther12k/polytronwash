@@ -32,8 +32,8 @@ SSE pushing state and logs live.
   Everything except **STOP ALL** locks while a cycle runs, and a sticky
   STOP bar follows you down the page.
 - **Program Sequences** — the three persistent `NAME:seconds` slots with
-  live validation and a computed total (SPIN steps include the 15 s
-  coast).
+  live validation and a computed total (SPIN steps include the 70 s
+  drain-prep + coast window).
 - **Timing & Presets** — steppers and preset chips for every
   runtime-tunable number.
 - **Manual Relays** (collapsed) — direct relay control for testing;
@@ -70,9 +70,10 @@ flip the substitution if yours are active-HIGH.
 - **WASH** — the motor alternates A/B in pulses (`wash_on_ms` energized,
   `wash_dead_ms` dead time between directions, both runtime-tunable
   0.5–10 s / 0.5–5 s from HA or the web UI).
-- **SPIN** — drain ON → clutch prep (`spin_prep_s`) → one direction
-  continuously (A or B — selectable in config via the `spin_motor`
-  select, no rewiring) → coast (`spin_coast_s`) → drain OFF.
+- **SPIN** — drain ON and pumping for a full 60 s (`spin_prep_s`) before
+  the motor starts, so the water is gone and the clutch engages dry →
+  one direction continuously (A or B — selectable in config via the
+  `spin_motor` select, no rewiring) → coast (`spin_coast_s`) → drain OFF.
 - **DRAIN / FILL** — single solenoid for the configured duration.
 - **STOP ALL** — motors + inlet cut instantly; if a spin was running the
   drum coasts `stop_coast_seconds` before the clutch brake engages.

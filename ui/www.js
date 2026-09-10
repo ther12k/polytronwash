@@ -175,8 +175,9 @@ function validateProgram(steps) {
 }
 
 function programTotal(steps) {
-  // Nominal program time; SPIN carries a fixed 15 s prep+coast window.
-  return steps.reduce((t, s) => t + s.sec + (s.op === "SPIN" ? 15 : 0), 0);
+  // Nominal program time; SPIN carries a fixed 70 s drain-prep(60)+coast(10)
+  // window (spin_extra_s in polytron-v3.yaml — keep in sync).
+  return steps.reduce((t, s) => t + s.sec + (s.op === "SPIN" ? 70 : 0), 0);
 }
 
 const fmtSec = (s) => {

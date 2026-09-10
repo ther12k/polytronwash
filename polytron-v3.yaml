@@ -39,8 +39,9 @@ substitutions:
   wash_on_ms: "1500ms"    # motor run per direction
   wash_dead_ms: "750ms"   # dead time between directions (both off)
   # --- spin shaping ---
-  spin_prep_s: "5s"       # drain engaged before motor starts
+  spin_prep_s: "60s"      # drain engaged this long before motor starts
   spin_coast_s: "10s"     # motor off, drum coasts, then drain releases
+  spin_extra_s: "70"      # prep + coast — keep progress windows in sync
   # Which motor relay spin uses: "A" or "B". Flip after the physical test
   # shows which direction actually spins the drum through the clutch.
   spin_motor: "A"
@@ -258,10 +259,10 @@ script:
       - lambda: |-
           id(g_mode) = "SPIN";
           id(g_step_start) = millis();
-          // progress window covers prep (5s) + spin (n) + coast (10s)
-          id(g_step_total_s) = duration_s + 15;
-          id(g_step_end) = millis() + (uint32_t) (duration_s + 15) * 1000;
-      - delay: ${spin_prep_s}               # clutch settle before motor
+          // progress window covers drain prep + spin + coast
+          id(g_step_total_s) = duration_s + ${spin_extra_s};
+          id(g_step_end) = millis() + (uint32_t) (duration_s + ${spin_extra_s}) * 1000;
+      - delay: ${spin_prep_s}               # drain runs 60 s before motor
       - if:
           condition:
             lambda: 'return id(g_spin_motor) == "B";'
@@ -353,8 +354,8 @@ script:
                 for (char &c : upper) c = toupper((unsigned char) c);
                 id(g_prog_name) = upper + " " + to_string(duration_s / 60) + "min";
                 id(g_prog_start) = millis();
-                // nominal window; SPIN carries its fixed 15 s prep+coast
-                id(g_prog_total_s) = duration_s + (cycle == "spin" ? 15 : 0);
+                // nominal window; SPIN carries its fixed prep+coast
+                id(g_prog_total_s) = duration_s + (cycle == "spin" ? ${spin_extra_s} : 0);
             - if:
                 condition:
                   lambda: 'return cycle == "wash";'
@@ -442,7 +443,7 @@ script:
                   id(g_prog_name) = name;
                   int total = 0;
                   for (const auto &t : id(g_tokens))
-                    total += atoi(t.c_str() + t.find(':') + 1) + (t.rfind("SPIN:", 0) == 0 ? 15 : 0);
+                    total += atoi(t.c_str() + t.find(':') + 1) + (t.rfind("SPIN:", 0) == 0 ? ${spin_extra_s} : 0);
                   id(g_prog_total_s) = total;
                   id(g_prog_start) = millis();
                   ESP_LOGI("washer", "Sequence '%s' accepted (%u steps)",
