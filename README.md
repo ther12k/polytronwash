@@ -153,10 +153,11 @@ Once flashed, the web UI is at `http://polytron-wash2.local/` (or the
 device's IP — the same UI also appears on the fallback hotspot at
 `192.168.4.1`).
 
-`api_*.py` are standalone [aioesphomeapi](https://github.com/esphome/aioesphomeapi)
-test scripts (relay matrix test, live cycle watcher, entity snapshot…).
-They read the key from `secrets.yaml` via `common.py` — set `WASHER_HOST`
-to override the device hostname.
+The [aioesphomeapi](https://github.com/esphome/aioesphomeapi) test
+scripts in **`tools/`** (device info, entity listing, live watcher,
+relay matrix, acceptance run…) are optional PC-side clients — see
+`tools/README.md`. They read the key from `secrets.yaml` via
+`common.py`; set `WASHER_HOST` to override the device hostname.
 
 ## Repo layout
 
@@ -167,8 +168,8 @@ ui/www.js               custom ESPHome web UI (embedded via js_include)
 ui/mock-server.py       offline mock of the ESPHome REST/SSE API for UI tests
 docs/screenshots/       web UI screenshots used by this README
 secrets.yaml.example    template for the git-ignored credentials
-common.py               secrets loader for the test scripts
-api_*.py                aioesphomeapi test/control scripts
+tools/                  PC-side test/debug scripts (see tools/README.md) —
+                        the ESP32 runs C++ only, never these
 flash.sh, net-watch.sh, air-watch.sh, Dockerfile.flash   flashing helpers
 ha/                     Home Assistant dashboard, custom card, voice scripts
 ```

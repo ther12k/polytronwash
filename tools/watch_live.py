@@ -1,8 +1,7 @@
 import asyncio, time
 from aioesphomeapi import APIClient
 
-HOST = "polytron-wash2.local"
-from common import KEY
+from common import HOST, KEY
 states = {}
 
 async def main():

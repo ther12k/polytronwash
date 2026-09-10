@@ -1,8 +1,7 @@
 import asyncio, time
 from aioesphomeapi import APIClient, TextInfo
 
-HOST = "polytron-wash2.local"
-from common import KEY
+from common import HOST, KEY
 
 async def call(fn, *a):
     r = fn(*a)

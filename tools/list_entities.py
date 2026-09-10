@@ -1,8 +1,7 @@
 import asyncio
 from aioesphomeapi import APIClient, NumberInfo, SelectInfo, ButtonInfo, TextInfo
 
-HOST = "polytron-wash2.local"
-from common import KEY
+from common import HOST, KEY
 
 async def main():
     cli = APIClient(HOST, 6053, "", noise_psk=KEY)

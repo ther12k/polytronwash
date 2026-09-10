@@ -8,7 +8,7 @@ import os
 
 def load_secrets(path=None):
     if path is None:
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "secrets.yaml")
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "secrets.yaml")
     out = {}
     with open(path) as f:
         for line in f:
