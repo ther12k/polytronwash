@@ -132,15 +132,15 @@ class PolytronWasherCard extends HTMLElement {
         </div>
       </div>
       <div class="card">
-        <div class="h2">Manual Controls</div><div class="h3">Control individual components in real time.</div>
-        <div class="grid2${lock?" dis":""}">${sw(C.drain,"Drain-Clutch","💧")}${sw(C.motor_a,"Motor A","⚙")}${sw(C.motor_b,"Motor B","⚙")}${sw(C.inlet,"Water Inlet","💧")}</div>
-      </div>
-      <div class="card">
         <div class="h2">Quick Actions</div><div class="h3">Start specific functions or stop everything.</div>
         <div class="qarow">
           ${qa(C.start_wash,"▶","Start Wash", lock ? "b dis" : "b")}${qa(C.start_drain,"💧","Start Drain", lock ? "b dis" : "b")}${qa(C.start_spin,"🌀","Start Spin", lock ? "b dis" : "b")}
           ${qa(C.start_fill,"🚿","Start Fill", lock ? "b dis" : "b")}${qa(C.stop,"■","Stop All","r")}
         </div>
+      </div>
+      <div class="card">
+        <div class="h2">Manual Controls</div><div class="h3">Control individual components in real time.</div>
+        <div class="grid2${lock?" dis":""}">${sw(C.drain,"Drain-Clutch","💧")}${sw(C.motor_a,"Motor A","⚙")}${sw(C.motor_b,"Motor B","⚙")}${sw(C.inlet,"Water Inlet","💧")}</div>
       </div>
       <div class="card${lock?" dis":""}">
         <div class="h2">⏱ Cycle Timing <span class="mut">(minutes)</span></div><div class="h3">Set the duration for each step.</div>

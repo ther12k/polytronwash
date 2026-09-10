@@ -101,7 +101,9 @@ taps or one voice command.
 
 The device also runs its own **web UI** (port 80) with the same entities
 grouped into panes — Status, Start a Cycle, Timing & Presets, Manual
-Relays, Program Sequences — as a fallback when HA is down.
+Relays, Program Sequences — as a fallback when HA is down. The UI is
+**embedded in the firmware** (`local: true`, ~140 KB flash, no RAM cost),
+so the page loads even with no internet — no CDN dependency.
 
 ## Getting started
 

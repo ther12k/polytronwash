@@ -129,6 +129,9 @@ captive_portal:
 web_server:
   version: 3
   port: 80
+  # Embed the UI in flash (142 KB PROGMEM, no RAM cost) so the fallback page
+  # loads even without internet — the default pulls the UI from a CDN.
+  local: true
   sorting_groups:
     - id: grp_status
       name: "Cycle Status"
