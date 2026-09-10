@@ -1,0 +1,14 @@
+- id: washer_cycle_finished
+  alias: "Washer: cycle finished"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.polytron_washing_machine_cycle_running
+      from: "on"
+      to: "off"
+  action:
+    - action: notify.persistent_notification
+      data:
+        title: "🧺 Washer cycle finished"
+        message: >-
+          Program '{{ states("sensor.polytron_washing_machine_current_program") }}'
+          has ended. All loads are off.

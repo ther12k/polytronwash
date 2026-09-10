@@ -1,0 +1,320 @@
+title: Polytron Washer
+views:
+  - title: Polytron App
+    type: panel
+    cards:
+      - type: custom:polytron-washer-card
+        title: Polytron Washing Machine
+        subtitle: Smart Controller
+  - title: Home
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Current Cycle
+            heading_style: title
+          - type: tile
+            entity: sensor.polytron_washing_machine_current_program
+            name: Program
+            icon: mdi:washing-machine
+            vertical: false
+          - type: gauge
+            entity: sensor.polytron_washing_machine_cycle_progress
+            name: Progress
+            unit: "%"
+            min: 0
+            max: 100
+            needle: false
+            severity: {green: 0, yellow: 60, red: 90}
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: sensor.polytron_washing_machine_cycle_elapsed
+                name: Elapsed
+                icon: mdi:timer
+              - type: tile
+                entity: sensor.polytron_washing_machine_cycle_remaining
+                name: Remaining
+                icon: mdi:timer-sand
+          - type: tile
+            entity: binary_sensor.polytron_washing_machine_cycle_running
+            name: Cycle Status
+      - type: grid
+        cards:
+          - type: heading
+            heading: Start a Program
+            heading_style: title
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: button.polytron_washing_machine_run_quick
+                name: Quick
+                icon: mdi:lightning-bolt
+                color: deep-orange
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_run_quick}
+                hide_state: true
+              - type: tile
+                entity: button.polytron_washing_machine_run_normal
+                name: Normal
+                icon: mdi:leaf
+                color: green
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_run_normal}
+                hide_state: true
+              - type: tile
+                entity: button.polytron_washing_machine_run_custom
+                name: Custom
+                icon: mdi:cog
+                color: purple
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_run_custom}
+                hide_state: true
+          - type: heading
+            heading: Quick Actions
+            heading_style: title
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: button.polytron_washing_machine_start_wash
+                name: Wash
+                icon: mdi:play-circle
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_wash}
+              - type: tile
+                entity: button.polytron_washing_machine_start_drain
+                name: Drain
+                icon: mdi:water-remove
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_drain}
+              - type: tile
+                entity: button.polytron_washing_machine_start_spin
+                name: Spin
+                icon: mdi:rotate-right
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_spin}
+              - type: tile
+                entity: button.polytron_washing_machine_start_fill
+                name: Fill
+                icon: mdi:valve
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_fill}
+          - type: tile
+            entity: button.polytron_washing_machine_stop_all
+            name: STOP ALL
+            icon: mdi:octagon
+            color: red
+            vertical: true
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target: {entity_id: button.polytron_washing_machine_stop_all}
+          - type: heading
+            heading: Recent Activity
+            heading_style: title
+          - type: logbook
+            entities:
+              - sensor.polytron_washing_machine_current_program
+              - binary_sensor.polytron_washing_machine_cycle_running
+              - switch.polytron_washing_machine_drain_clutch
+              - switch.polytron_washing_machine_motor_a
+              - switch.polytron_washing_machine_motor_b
+
+  - title: Programs
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Edit Program Sequence
+            heading_style: title
+          - type: markdown
+            content: >-
+              Tokens: **WASH:n · DRAIN:n · SPIN:n · FILL:n · WAIT:n** (seconds).
+              Example: `WASH:600, DRAIN:30, SPIN:300`
+          - type: entities
+            title: Quick
+            entities:
+              - entity: text.polytron_washing_machine_program_quick
+                name: Sequence
+          - type: entities
+            title: Normal
+            entities:
+              - entity: text.polytron_washing_machine_program_normal
+                name: Sequence
+          - type: entities
+            title: Custom
+            entities:
+              - entity: text.polytron_washing_machine_program_custom
+                name: Sequence
+      - type: grid
+        cards:
+          - type: heading
+            heading: Run
+            heading_style: title
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: button.polytron_washing_machine_run_quick
+                name: Quick
+                icon: mdi:play
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_run_quick}
+                hide_state: true
+              - type: tile
+                entity: button.polytron_washing_machine_run_normal
+                name: Normal
+                icon: mdi:play
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_run_normal}
+                hide_state: true
+              - type: tile
+                entity: button.polytron_washing_machine_run_custom
+                name: Custom
+                icon: mdi:play
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_run_custom}
+                hide_state: true
+
+  - title: Controls
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Manual Controls
+            heading_style: title
+          - type: markdown
+            content: >-
+              Direct component control. Motor A + B can never be on together
+              (hardware interlock). Use with care.
+          - type: entities
+            entities:
+              - entity: switch.polytron_washing_machine_drain_clutch
+                name: Drain-Clutch
+                icon: mdi:water-pump
+              - entity: switch.polytron_washing_machine_motor_a
+                name: Motor A
+                icon: mdi:engine
+              - entity: switch.polytron_washing_machine_motor_b
+                name: Motor B
+                icon: mdi:engine-outline
+              - entity: switch.polytron_washing_machine_water_inlet
+                name: Water Inlet
+                icon: mdi:valve
+      - type: grid
+        cards:
+          - type: heading
+            heading: Cycle Timing (minutes)
+            heading_style: title
+          - type: entities
+            entities:
+              - entity: select.polytron_washing_machine_wash_preset
+                name: Wash Preset
+              - entity: number.polytron_washing_machine_wash_minutes
+                name: Wash Minutes
+              - entity: select.polytron_washing_machine_spin_preset
+                name: Spin Preset
+              - entity: number.polytron_washing_machine_spin_minutes
+                name: Spin Minutes
+              - entity: number.polytron_washing_machine_drain_minutes
+                name: Drain Minutes
+              - entity: number.polytron_washing_machine_fill_minutes
+                name: Fill Minutes
+              - entity: number.polytron_washing_machine_wash_pulse_seconds
+                name: Wash Pulse Seconds
+              - entity: number.polytron_washing_machine_wash_dead_time_seconds
+                name: Wash Dead Time Seconds
+      - type: grid
+        cards:
+          - type: heading
+            heading: Start
+            heading_style: title
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: button.polytron_washing_machine_start_wash
+                name: Wash
+                icon: mdi:play-circle
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_wash}
+              - type: tile
+                entity: button.polytron_washing_machine_start_spin
+                name: Spin
+                icon: mdi:rotate-right
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_spin}
+              - type: tile
+                entity: button.polytron_washing_machine_start_fill
+                name: Fill
+                icon: mdi:valve
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_fill}
+              - type: tile
+                entity: button.polytron_washing_machine_start_drain
+                name: Drain
+                icon: mdi:water-remove
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.polytron_washing_machine_start_drain}
+
+  - title: Logs
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Device Health
+            heading_style: title
+          - type: tile
+            entity: sensor.polytron_washing_machine_cycle_state
+            name: Cycle State
+            icon: mdi:state-machine
+          - type: tile
+            entity: binary_sensor.polytron_washing_machine_cycle_running
+            name: Running
+          - type: heading
+            heading: Activity Log
+            heading_style: title
+          - type: logbook
+            hours_to_show: 24
+            entities:
+              - sensor.polytron_washing_machine_current_program
+              - sensor.polytron_washing_machine_cycle_state
+              - binary_sensor.polytron_washing_machine_cycle_running
+              - switch.polytron_washing_machine_drain_clutch
+              - switch.polytron_washing_machine_motor_a
+              - switch.polytron_washing_machine_motor_b
+              - switch.polytron_washing_machine_water_inlet

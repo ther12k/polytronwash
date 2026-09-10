@@ -1,0 +1,412 @@
+# Polytron washing machine — ESPHome controller
+#
+# Architecture: this YAML is the STABLE firmware/controller. Washing sequences
+# live on the device as DATA (text entities), editable at runtime from Home
+# Assistant / MCP / the web UI — no compile, no OTA, no reboot to change them.
+#
+#   Buttons exposed:   Power, Start/Pause, Program, Water Level
+#   Program slots:     Quick, Normal, Custom (persisted across reboots)
+#   Agent API actions: press_power, press_start_pause, press_program,
+#                      press_water_level, run_sequence, run_program,
+#                      save_program, stop_program
+#
+# Sequence syntax (comma separated, case-insensitive):
+#   POWER, START, START_PAUSE, PAUSE, PROGRAM, LEVEL (alias WATER_LEVEL),
+#   WAIT:n  (milliseconds pause before the next press)
+# Default gap between presses is 500 ms unless a WAIT token overrides it.
+# Example: "POWER, WAIT:1000, PROGRAM, PROGRAM, LEVEL, START"
+#
+# GPIO wiring (change here only — nothing below needs editing):
+#   GPIO18 -> POWER         GPIO19 -> START/PAUSE
+#   GPIO21 -> PROGRAM       GPIO22 -> WATER LEVEL
+
+substitutions:
+  name: polytron-wash
+  friendly_name: Polytron Washing Machine
+  # Length of one button press. Human presses are ~200-500 ms.
+  pulse_duration: "300ms"
+  # Default pause between two presses in a sequence (ms), unless WAIT:n given.
+  default_gap_ms: "500"
+  # Opto-relay boards are usually active-LOW. If a relay clicks ON at boot
+  # and stays on, change to "false".
+  relay_active_low: "true"
+  pin_power: GPIO22
+  pin_start_pause: GPIO19
+  pin_program: GPIO21
+  # Unused: WATER LEVEL moved to GPIO18 (channel IN1 is dead on this relay
+  # module / GPIO18 pin untrusted on this board). Swap back if hardware changes.
+  pin_water_level: GPIO18
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: Polytron front-panel button bridge with runtime program engine
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_key
+  # Don't reboot when Home Assistant is not connected yet (initial testing).
+  # Remove this line once the device is stable in Home Assistant.
+  reboot_timeout: 0h
+  actions:
+    # --- single presses (what an AI agent should use instead of GPIO) ---
+    - action: press_power
+      then:
+        - script.execute: press_power
+    - action: press_start_pause
+      then:
+        - script.execute: press_start_pause
+    - action: press_program
+      then:
+        - script.execute: press_program
+    - action: press_water_level
+      then:
+        - script.execute: press_water_level
+
+    # --- run a one-off sequence without saving it ---
+    - action: run_sequence
+      variables:
+        sequence: string
+      then:
+        - script.execute:
+            id: run_seq
+            seq: !lambda 'return sequence;'
+
+    # --- named program slots: "quick", "normal", "custom" ---
+    - action: run_program
+      variables:
+        name: string
+      then:
+        - lambda: |
+            std::string n;
+            for (char c : name) n += (char) tolower((unsigned char) c);
+            if (n == "quick") id(run_seq).execute(id(prog_quick).state);
+            else if (n == "normal") id(run_seq).execute(id(prog_normal).state);
+            else if (n == "custom") id(run_seq).execute(id(prog_custom).state);
+            else ESP_LOGE("washer", "Unknown program name: '%s'", n.c_str());
+
+    - action: save_program
+      variables:
+        name: string
+        sequence: string
+      then:
+        - lambda: |
+            std::string n;
+            for (char c : name) n += (char) tolower((unsigned char) c);
+            if (n == "quick") id(prog_quick).publish_state(sequence);
+            else if (n == "normal") id(prog_normal).publish_state(sequence);
+            else if (n == "custom") id(prog_custom).publish_state(sequence);
+            else ESP_LOGE("washer", "Unknown program name: '%s'", n.c_str());
+            ESP_LOGI("washer", "Program '%s' saved", n.c_str());
+
+    # --- abort a running sequence (does NOT touch the machine itself) ---
+    - action: stop_program
+      then:
+        - script.stop: run_seq
+        - lambda: 'id(g_running) = false;'
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Fallback hotspot if WiFi fails — connect to "Polytron Wash Setup" to
+  # enter real WiFi credentials via captive portal (persisted, no re-flash).
+  ap:
+    ssid: "Polytron Wash Setup"
+    password: !secret ap_password
+
+captive_portal:
+
+# Simple web page at http://<device-ip>/ to press buttons and edit programs
+# from a browser, useful for testing before Home Assistant is set up.
+web_server:
+
+# Onboard blue LED (GPIO2 on most ESP32 dev boards): blinking = ESPHome API
+# (Home Assistant) not connected.
+status_led:
+  pin:
+    number: GPIO2
+    inverted: true
+
+globals:
+  - id: g_running
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_tokens
+    type: std::vector<std::string>
+    restore_value: false
+  - id: g_idx
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_gap_ms
+    type: int
+    restore_value: false
+    initial_value: ${default_gap_ms}
+
+script:
+  # One script per physical button. Default script mode is "single", which
+  # ignores a new press while one is still running — prevents overlapping
+  # relay pulses if a button is clicked twice quickly.
+  - id: press_power
+    then:
+      - switch.turn_on: relay_power
+      - delay: ${pulse_duration}
+      - switch.turn_off: relay_power
+
+  - id: press_start_pause
+    then:
+      - switch.turn_on: relay_start_pause
+      - delay: ${pulse_duration}
+      - switch.turn_off: relay_start_pause
+
+  - id: press_program
+    then:
+      - switch.turn_on: relay_program
+      - delay: ${pulse_duration}
+      - switch.turn_off: relay_program
+
+  - id: press_water_level
+    then:
+      - switch.turn_on: relay_water_level
+      - delay: ${pulse_duration}
+      - switch.turn_off: relay_water_level
+
+  # Sequence interpreter: validates the whole sequence FIRST, then walks the
+  # tokens, firing the matching press script and pausing between steps.
+  - id: run_seq
+    parameters:
+      seq: string
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_running);'
+          then:
+            - logger.log:
+                level: WARN
+                format: "Program already running — new run ignored."
+          else:
+            - lambda: |-
+                id(g_tokens).clear();
+                std::string s = seq;
+                for (char &c : s) {
+                  c = toupper((unsigned char) c);
+                  if (c == ',' || c == ';' || c == '\n' || c == '\t') c = ' ';
+                }
+                char buf[256];
+                strncpy(buf, s.c_str(), sizeof(buf) - 1);
+                buf[sizeof(buf) - 1] = 0;
+                for (char *p = strtok(buf, " "); p != nullptr; p = strtok(nullptr, " ")) {
+                  id(g_tokens).push_back(std::string(p));
+                }
+                bool ok = !id(g_tokens).empty() && id(g_tokens).size() <= 40;
+                for (const auto &t : id(g_tokens)) {
+                  if (t.rfind("WAIT:", 0) == 0) {
+                    int n = atoi(t.c_str() + 5);
+                    if (n < 0 || n > 60000) {
+                      ESP_LOGE("washer", "WAIT out of range (0-60000): %s", t.c_str());
+                      ok = false;
+                    }
+                  } else if (!(t == "POWER" || t == "START" || t == "START_PAUSE" ||
+                               t == "PAUSE" || t == "PROGRAM" || t == "LEVEL" ||
+                               t == "WATER_LEVEL")) {
+                    ESP_LOGE("washer", "Unknown token: '%s'", t.c_str());
+                    ok = false;
+                  }
+                }
+                if (ok) {
+                  id(g_idx) = 0;
+                  id(g_running) = true;
+                  ESP_LOGI("washer", "Program accepted (%u steps)", (unsigned) id(g_tokens).size());
+                } else {
+                  id(g_tokens).clear();
+                  ESP_LOGE("washer", "Sequence rejected — nothing was pressed");
+                }
+            - while:
+                condition:
+                  lambda: 'return id(g_running) && id(g_idx) < (int) id(g_tokens).size();'
+                then:
+                  - lambda: |-
+                      const std::string t = id(g_tokens)[id(g_idx)];
+                      id(g_idx) += 1;
+                      int gap = ${default_gap_ms};
+                      if (t.rfind("WAIT:", 0) == 0) {
+                        // standalone pause before the next action
+                        gap = atoi(t.c_str() + 5);
+                      } else {
+                        // a WAIT right after a press overrides the default gap
+                        if (id(g_idx) < (int) id(g_tokens).size() &&
+                            id(g_tokens)[id(g_idx)].rfind("WAIT:", 0) == 0) {
+                          gap = atoi(id(g_tokens)[id(g_idx)].c_str() + 5);
+                          id(g_idx) += 1;
+                        }
+                        if (t == "POWER") {
+                          id(press_power).execute();
+                        } else if (t == "START" || t == "START_PAUSE" || t == "PAUSE") {
+                          id(press_start_pause).execute();
+                        } else if (t == "PROGRAM") {
+                          id(press_program).execute();
+                        } else if (t == "LEVEL" || t == "WATER_LEVEL") {
+                          id(press_water_level).execute();
+                        }
+                      }
+                      id(g_gap_ms) = gap;
+                      if (id(g_idx) >= (int) id(g_tokens).size()) {
+                        id(g_running) = false;
+                        ESP_LOGI("washer", "Program finished");
+                      }
+                  - delay: !lambda 'return (uint32_t) id(g_gap_ms);'
+
+# Raw relays: internal so they are NOT exposed to Home Assistant / Google.
+# Only buttons, program slots and actions above are visible.
+switch:
+  - platform: gpio
+    id: relay_power
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin:
+      number: ${pin_power}
+      inverted: ${relay_active_low}
+
+  - platform: gpio
+    id: relay_start_pause
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin:
+      number: ${pin_start_pause}
+      inverted: ${relay_active_low}
+
+  - platform: gpio
+    id: relay_program
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin:
+      number: ${pin_program}
+      inverted: ${relay_active_low}
+
+  - platform: gpio
+    id: relay_water_level
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin:
+      number: ${pin_water_level}
+      inverted: ${relay_active_low}
+
+# Single front-panel presses (also reachable from Google via HA).
+button:
+  - platform: template
+    name: "Power"
+    id: btn_power
+    icon: mdi:power
+    on_press:
+      - script.execute: press_power
+
+  - platform: template
+    name: "Start / Pause"
+    id: btn_start_pause
+    icon: mdi:play-pause
+    on_press:
+      - script.execute: press_start_pause
+
+  - platform: template
+    name: "Program"
+    id: btn_program
+    icon: mdi:rotate-360
+    on_press:
+      - script.execute: press_program
+
+  - platform: template
+    name: "Water Level"
+    id: btn_water_level
+    icon: mdi:water
+    on_press:
+      - script.execute: press_water_level
+
+  # Named program runners (usable from HA dashboard, Google via HA, and MCP).
+  - platform: template
+    name: "Run Quick"
+    id: btn_run_quick
+    icon: mdi:play-circle-outline
+    on_press:
+      - script.execute:
+          id: run_seq
+          seq: !lambda 'return id(prog_quick).state;'
+
+  - platform: template
+    name: "Run Normal"
+    id: btn_run_normal
+    icon: mdi:play-circle-outline
+    on_press:
+      - script.execute:
+          id: run_seq
+          seq: !lambda 'return id(prog_normal).state;'
+
+  - platform: template
+    name: "Run Custom"
+    id: btn_run_custom
+    icon: mdi:play-circle-outline
+    on_press:
+      - script.execute:
+          id: run_seq
+          seq: !lambda 'return id(prog_custom).state;'
+
+  - platform: template
+    name: "Stop Program"
+    id: btn_stop_program
+    icon: mdi:stop-circle-outline
+    on_press:
+      - script.stop: run_seq
+      - lambda: 'id(g_running) = false;'
+
+# Editable program slots. restore_value keeps them across reboots/power cuts.
+# An AI agent writes sequences here (via HA text entity or save_program action)
+# and runs them — changing a wash program never requires a firmware update.
+text:
+  - platform: template
+    name: "Program Quick"
+    id: prog_quick
+    icon: mdi:washing-machine
+    mode: text
+    optimistic: true
+    restore_value: true
+    max_length: 255
+    initial_value: "POWER, WAIT:1000, PROGRAM, PROGRAM, LEVEL, START"
+
+  - platform: template
+    name: "Program Normal"
+    id: prog_normal
+    icon: mdi:washing-machine
+    mode: text
+    optimistic: true
+    restore_value: true
+    max_length: 255
+    initial_value: "POWER, WAIT:1000, START"
+
+  - platform: template
+    name: "Program Custom"
+    id: prog_custom
+    icon: mdi:washing-machine
+    mode: text
+    optimistic: true
+    restore_value: true
+    max_length: 255
+    initial_value: ""
+
+# Feedback for dashboards and agents: is a sequence currently executing?
+binary_sensor:
+  - platform: template
+    name: "Program Running"
+    id: bsen_program_running
+    device_class: running
+    lambda: 'return id(g_running);'

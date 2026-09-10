@@ -1,0 +1,887 @@
+# Polytron washing machine — v3 DIRECT CONTROL firmware
+#
+# ⚠️  AC CONVERSION FIRMWARE — do not install until the low-voltage side is
+#     wired and the AC side is checked (motor-rated contacts, fuse, lid switch
+#     in series with the motor line). Machine unplugged while wiring.
+#
+# Replaces the front-panel button bridge (v2). The factory controller's panel
+# is no longer used; this firmware directly drives the machine's loads:
+#
+#   GPIO22 -> IN4  Drain / Clutch solenoid   (PROVEN channel; maintained ON)
+#   GPIO19 -> IN2  Motor A (wash dir 1 + SPIN)  (PROVEN channel)
+#   GPIO21 -> IN3  Motor B (wash dir 2)         (PROVEN channel)
+#   GPIO18 -> IN1  Water inlet (DEFERRED + unproven channel — test before use)
+#
+# Safety architecture:
+#   - Motor A / Motor B are INTERLOCKED in C++ (interlock + 800 ms dead time).
+#     No software path — not API, not AI, not scripts — can close both at once.
+#   - All power relays restore to OFF on boot (restore_mode: ALWAYS_OFF).
+#   - If the ESPHome API client disconnects, everything stops within seconds.
+#   - Raw relays ARE exposed as HA switches for external programs, but the
+#     A/B interlock + dead time live in C++ and hold no matter who commands.
+#     High-level actions remain the preferred interface for automation.
+#
+# High-level API (seconds):
+#   wash(n)  : alternating A/B pulses for n seconds
+#   drain(n) : drain solenoid ON for n seconds
+#   spin(n)  : drain ON -> wait -> motor A continuous n s -> coast -> drain OFF
+#   fill(n)  : inlet ON for n seconds (when wired)
+#   stop_all : halt everything immediately
+#
+# Sequence syntax (data, runtime-editable, durations in SECONDS):
+#   WASH:n  DRAIN:n  SPIN:n  FILL:n  WAIT:n
+#   Example:  "WASH:600, DRAIN:30, SPIN:300"
+
+substitutions:
+  name: polytron-wash2
+  friendly_name: Polytron Washing Machine
+  # --- wash pulse shaping ---
+  wash_on_ms: "1500ms"    # motor run per direction
+  wash_dead_ms: "750ms"   # dead time between directions (both off)
+  # --- spin shaping ---
+  spin_prep_s: "5s"       # drain engaged before motor starts
+  spin_coast_s: "10s"     # motor off, drum coasts, then drain releases
+  # Which motor relay spin uses: "A" or "B". Flip after the physical test
+  # shows which direction actually spins the drum through the clutch.
+  spin_motor: "A"
+  # Wiring
+  relay_active_low: "true"
+  pin_drain: GPIO22
+  pin_motor_a: GPIO19
+  pin_motor_b: GPIO21
+  pin_inlet: GPIO18
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: Polytron direct-drive conversion (drain, motor A/B, inlet)
+  on_boot:
+    priority: 600
+    then:
+      # Belt and braces with ALWAYS_OFF: never boot into an energized load.
+      - switch.turn_off: relay_drain
+      - switch.turn_off: relay_motor_a
+      - switch.turn_off: relay_motor_b
+      - switch.turn_off: relay_inlet
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_key
+  reboot_timeout: 0s
+  on_client_disconnected:
+    # Nobody connected -> nothing should keep running. Safety over convenience:
+    # a phone closing the app aborts the cycle. Remove ONLY once the machine is
+    # trusted and always supervised.
+    - script.execute: stop_all
+  actions:
+    - action: wash
+      variables: { duration_s: int }
+      then:
+        - script.execute:
+            id: start_cycle
+            cycle: "wash"
+            duration_s: !lambda 'return duration_s;'
+    - action: drain
+      variables: { duration_s: int }
+      then:
+        - script.execute:
+            id: start_cycle
+            cycle: "drain"
+            duration_s: !lambda 'return duration_s;'
+    - action: spin
+      variables: { duration_s: int }
+      then:
+        - script.execute:
+            id: start_cycle
+            cycle: "spin"
+            duration_s: !lambda 'return duration_s;'
+    - action: fill
+      variables: { duration_s: int }
+      then:
+        - script.execute:
+            id: start_cycle
+            cycle: "fill"
+            duration_s: !lambda 'return duration_s;'
+    - action: stop_all
+      then:
+        - script.execute: stop_all
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Polytron Wash Setup"
+    password: !secret ap_password
+
+captive_portal:
+
+web_server:
+  version: 3
+  port: 80
+  sorting_groups:
+    - id: grp_status
+      name: "Cycle Status"
+    - id: grp_start
+      name: "Start a Cycle"
+    - id: grp_timing
+      name: "Timing & Presets"
+    - id: grp_manual
+      name: "Manual Relays (Advanced)"
+    - id: grp_programs
+      name: "Program Sequences"
+
+status_led:
+  pin:
+    number: GPIO2
+    inverted: true
+
+globals:
+  - id: g_running
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: g_tokens
+    type: std::vector<std::string>
+    restore_value: false
+  - id: g_idx
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_step_end
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: g_mode
+    type: std::string
+    restore_value: false
+    initial_value: '"IDLE"'
+  - id: g_step_start
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: g_step_total_s
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: g_prog_name
+    type: std::string
+    restore_value: false
+    initial_value: '"IDLE"'
+  - id: g_spin_motor
+    type: std::string
+    restore_value: true
+    initial_value: '"A"'
+
+script:
+  # ============ cycle primitives (only way relays ever move) ============
+
+  - id: cycle_wash
+    mode: single
+    parameters:
+      duration_s: int
+    then:
+      - switch.turn_off: relay_drain        # clutch released = wash mode
+      - delay: 800ms
+      - lambda: |-
+          id(g_mode) = "WASH";
+          id(g_step_start) = millis();
+          id(g_step_total_s) = duration_s;
+          id(g_step_end) = millis() + (uint32_t) duration_s * 1000;
+          ESP_LOGI("washer", "WASH %d s (on %s / dead %s)",
+                   duration_s, "${wash_on_ms}", "${wash_dead_ms}");
+      - while:
+          condition:
+            lambda: 'return millis() < id(g_step_end);'
+          then:
+            - switch.turn_on: relay_motor_a
+            - delay: !lambda 'return (uint32_t) (id(num_wash_on).state * 1000);'
+            - switch.turn_off: relay_motor_a
+            - delay: !lambda 'return (uint32_t) (id(num_wash_dead).state * 1000);'
+            - switch.turn_on: relay_motor_b
+            - delay: !lambda 'return (uint32_t) (id(num_wash_on).state * 1000);'
+            - switch.turn_off: relay_motor_b
+            - delay: !lambda 'return (uint32_t) (id(num_wash_dead).state * 1000);'
+
+  - id: cycle_drain
+    mode: single
+    parameters:
+      duration_s: int
+    then:
+      - switch.turn_off: relay_motor_a
+      - switch.turn_off: relay_motor_b
+      - switch.turn_on: relay_drain
+      - lambda: |-
+          id(g_mode) = "DRAIN";
+          id(g_step_start) = millis();
+          id(g_step_total_s) = duration_s;
+          id(g_step_end) = millis() + (uint32_t) duration_s * 1000;
+      - while:
+          condition:
+            lambda: 'return millis() < id(g_step_end);'
+          then:
+            - delay: 1s
+      - switch.turn_off: relay_drain
+
+  - id: cycle_spin
+    mode: single
+    parameters:
+      duration_s: int
+    then:
+      - switch.turn_off: relay_motor_a
+      - switch.turn_off: relay_motor_b
+      - switch.turn_on: relay_drain         # drain opens + clutch engages
+      - lambda: |-
+          id(g_mode) = "SPIN";
+          id(g_step_start) = millis();
+          // progress window covers prep (5s) + spin (n) + coast (10s)
+          id(g_step_total_s) = duration_s + 15;
+          id(g_step_end) = millis() + (uint32_t) (duration_s + 15) * 1000;
+      - delay: ${spin_prep_s}               # clutch settle before motor
+      - if:
+          condition:
+            lambda: 'return id(g_spin_motor) == "B";'
+          then:
+            - switch.turn_on: relay_motor_b   # spin direction: live HA dropdown
+          else:
+            - switch.turn_on: relay_motor_a
+      - delay: !lambda 'return (uint32_t) duration_s * 1000;'
+      - if:
+          condition:
+            lambda: 'return id(g_spin_motor) == "B";'
+          then:
+            - switch.turn_off: relay_motor_b
+          else:
+            - switch.turn_off: relay_motor_a
+      - delay: ${spin_coast_s}              # drum coasts before clutch drops
+      - switch.turn_off: relay_drain
+
+  - id: cycle_fill
+    mode: single
+    parameters:
+      duration_s: int
+    then:
+      - lambda: |-
+          id(g_mode) = "FILL";
+          id(g_step_start) = millis();
+          id(g_step_total_s) = duration_s;
+      - switch.turn_on: relay_inlet
+      - delay: !lambda 'return (uint32_t) duration_s * 1000;'
+      - switch.turn_off: relay_inlet
+
+  # ============ safety & orchestration ============
+
+  - id: stop_all
+    mode: single
+    then:
+      - script.stop: run_seq
+      - script.stop: cycle_wash
+      - script.stop: cycle_drain
+      - script.stop: cycle_spin
+      - script.stop: cycle_fill
+      - switch.turn_off: relay_motor_a
+      - switch.turn_off: relay_motor_b
+      - switch.turn_off: relay_inlet
+      # SPIN-aware stop: never slam the brake on a fast drum.
+      # Motor + inlet die instantly; the clutch stays engaged while the
+      # drum coasts for Stop Coast Seconds, then the brake is released.
+      - if:
+          condition:
+            and:
+              - lambda: 'return id(g_mode) == "SPIN";'
+              - lambda: 'return id(num_stop_coast).state > 0;'
+          then:
+            - lambda: |-
+                ESP_LOGW("washer", "STOP: motor off, coasting %.0f s before brake",
+                         id(num_stop_coast).state);
+            - delay: !lambda 'return (uint32_t) (id(num_stop_coast).state * 1000);'
+            - switch.turn_off: relay_drain
+          else:
+            - switch.turn_off: relay_drain
+      - lambda: |-
+          id(g_running) = false;
+          id(g_mode) = "IDLE";
+          id(g_step_total_s) = 0;
+          id(g_prog_name) = "STOPPED";
+          ESP_LOGW("washer", "STOP ALL complete");
+
+  # Gatekeeper: enforces "one cycle at a time", then dispatches.
+  - id: start_cycle
+    mode: single
+    parameters:
+      cycle: string
+      duration_s: int
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_running);'
+          then:
+            - logger.log:
+                level: WARN
+                format: "Cycle request '%s' ignored — something is already running. Press STOP ALL first."
+                args: [cycle.c_str()]
+          else:
+            - lambda: |-
+                id(g_running) = true;
+                id(g_prog_name) = cycle;
+                std::string upper = cycle;
+                for (char &c : upper) c = toupper((unsigned char) c);
+                id(g_prog_name) = upper + " " + to_string(duration_s / 60) + "min";
+            - if:
+                condition:
+                  lambda: 'return cycle == "wash";'
+                then:
+                  - script.execute:
+                      id: cycle_wash
+                      duration_s: !lambda 'return duration_s;'
+                  - script.wait: cycle_wash
+            - if:
+                condition:
+                  lambda: 'return cycle == "drain";'
+                then:
+                  - script.execute:
+                      id: cycle_drain
+                      duration_s: !lambda 'return duration_s;'
+                  - script.wait: cycle_drain
+            - if:
+                condition:
+                  lambda: 'return cycle == "spin";'
+                then:
+                  - script.execute:
+                      id: cycle_spin
+                      duration_s: !lambda 'return duration_s;'
+                  - script.wait: cycle_spin
+            - if:
+                condition:
+                  lambda: 'return cycle == "fill";'
+                then:
+                  - script.execute:
+                      id: cycle_fill
+                      duration_s: !lambda 'return duration_s;'
+                  - script.wait: cycle_fill
+            - lambda: |-
+                id(g_running) = false;
+                id(g_mode) = "IDLE";
+                id(g_step_total_s) = 0;
+                id(g_prog_name) = "DONE " + cycle;
+                ESP_LOGI("washer", "Cycle '%s' finished", cycle.c_str());
+
+  # ============ sequence interpreter (v3 tokens, seconds) ============
+  # "WASH:600, DRAIN:30, SPIN:300" — validated fully BEFORE anything moves.
+
+  - id: run_seq
+    mode: single
+    parameters:
+      seq: string
+      name: string
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_running);'
+          then:
+            - logger.log:
+                level: WARN
+                format: "Sequence ignored — cycle already running."
+          else:
+            - lambda: |-
+                id(g_tokens).clear();
+                std::string s = seq;
+                for (char &c : s) {
+                  c = toupper((unsigned char) c);
+                  if (c == ',' || c == ';' || c == '\n' || c == '\t') c = ' ';
+                }
+                char buf[256];
+                strncpy(buf, s.c_str(), sizeof(buf) - 1);
+                buf[sizeof(buf) - 1] = 0;
+                for (char *p = strtok(buf, " "); p != nullptr; p = strtok(nullptr, " "))
+                  id(g_tokens).push_back(std::string(p));
+                bool ok = !id(g_tokens).empty() && id(g_tokens).size() <= 20;
+                for (const auto &t : id(g_tokens)) {
+                  bool known = false;
+                  int n = 0;
+                  if (t.rfind("WAIT:", 0) == 0 || t.rfind("WASH:", 0) == 0 ||
+                      t.rfind("DRAIN:", 0) == 0 || t.rfind("SPIN:", 0) == 0 ||
+                      t.rfind("FILL:", 0) == 0) {
+                    n = atoi(t.c_str() + t.find(':') + 1);
+                    known = (n >= 1 && n <= 3600);
+                  }
+                  if (!known) { ESP_LOGE("washer", "Bad token: %s", t.c_str()); ok = false; }
+                }
+                if (ok) {
+                  id(g_idx) = 0;
+                  id(g_running) = true;
+                  id(g_prog_name) = name;
+                  ESP_LOGI("washer", "Sequence '%s' accepted (%u steps)",
+                           name.c_str(), (unsigned) id(g_tokens).size());
+                } else {
+                  id(g_tokens).clear();
+                  ESP_LOGE("washer", "Sequence rejected — nothing was energized");
+                }
+            - while:
+                condition:
+                  lambda: 'return id(g_running) && id(g_idx) < (int) id(g_tokens).size();'
+                then:
+                  - lambda: |-
+                      const std::string t = id(g_tokens)[id(g_idx)];
+                      id(g_idx) += 1;
+                      int n = atoi(t.c_str() + t.find(':') + 1);
+                      if (t.rfind("WAIT:", 0) == 0) {
+                        id(g_step_end) = millis() + (uint32_t) n * 1000;
+                      } else if (t.rfind("WASH:", 0) == 0) {
+                        id(cycle_wash).execute(n);
+                      } else if (t.rfind("DRAIN:", 0) == 0) {
+                        id(cycle_drain).execute(n);
+                      } else if (t.rfind("SPIN:", 0) == 0) {
+                        id(cycle_spin).execute(n);
+                      } else if (t.rfind("FILL:", 0) == 0) {
+                        id(cycle_fill).execute(n);
+                      }
+                  - while:
+                      condition:
+                        lambda: |-
+                          // wait for the active cycle script (or WAIT timer) to finish
+                          if (id(g_idx) > 0) {
+                            const std::string prev = id(g_tokens)[id(g_idx) - 1];
+                            if (prev.rfind("WAIT:", 0) == 0) return millis() < id(g_step_end);
+                          }
+                          return id(cycle_wash).is_running() || id(cycle_drain).is_running()
+                              || id(cycle_spin).is_running() || id(cycle_fill).is_running();
+                      then:
+                        - delay: 500ms
+            - lambda: |-
+                if (id(g_running)) {
+                  id(g_running) = false;
+                  id(g_mode) = "IDLE";
+                  ESP_LOGI("washer", "Sequence finished");
+                }
+
+# ============ raw power relays — INTERNAL, interlocked ============
+
+switch:
+  - platform: gpio
+    id: relay_drain
+    name: "Drain-Clutch"
+    web_server:
+      sorting_group_id: grp_manual
+      sorting_weight: 10
+    restore_mode: ALWAYS_OFF
+    interlock: &fill_drain_interlock [relay_inlet, relay_drain]
+    pin:
+      number: ${pin_drain}
+      inverted: ${relay_active_low}
+
+  - platform: gpio
+    id: relay_motor_a
+    name: "Motor A"
+    web_server:
+      sorting_group_id: grp_manual
+      sorting_weight: 20
+    restore_mode: ALWAYS_OFF
+    interlock: &motor_interlock [relay_motor_a, relay_motor_b]
+    interlock_wait_time: 500ms
+    pin:
+      number: ${pin_motor_a}
+      inverted: ${relay_active_low}
+
+  - platform: gpio
+    id: relay_motor_b
+    name: "Motor B"
+    web_server:
+      sorting_group_id: grp_manual
+      sorting_weight: 30
+    restore_mode: ALWAYS_OFF
+    interlock: *motor_interlock
+    interlock_wait_time: 500ms
+    pin:
+      number: ${pin_motor_b}
+      inverted: ${relay_active_low}
+
+  - platform: gpio
+    id: relay_inlet
+    name: "Water Inlet"
+    web_server:
+      sorting_group_id: grp_manual
+      sorting_weight: 40
+    restore_mode: ALWAYS_OFF
+    interlock: *fill_drain_interlock
+    pin:
+      number: ${pin_inlet}
+      inverted: ${relay_active_low}
+
+# ============ what Home Assistant / the AI sees ============
+
+button:
+  - platform: template
+    name: "Run Quick"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 60
+    icon: mdi:washing-machine
+    on_press:
+      - script.execute:
+          id: run_seq
+          seq: !lambda 'return id(prog_quick).state;'
+          name: "QUICK"
+
+  - platform: template
+    name: "Run Normal"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 70
+    icon: mdi:tshirt-crew
+    on_press:
+      - script.execute:
+          id: run_seq
+          seq: !lambda 'return id(prog_normal).state;'
+          name: "NORMAL"
+
+  - platform: template
+    name: "Run Custom"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 80
+    icon: mdi:puzzle
+    on_press:
+      - script.execute:
+          id: run_seq
+          seq: !lambda 'return id(prog_custom).state;'
+          name: "CUSTOM"
+
+  - platform: template
+    name: "STOP ALL"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 50
+    icon: mdi:octagon
+    on_press:
+      - script.execute: stop_all
+
+  - platform: template
+    name: "Start Wash"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 10
+    icon: mdi:washing-machine
+    on_press:
+      - script.execute:
+          id: start_cycle
+          cycle: "wash"
+          duration_s: !lambda 'return (int) (id(num_wash_min).state * 60);'
+
+  - platform: template
+    name: "Start Spin"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 20
+    icon: mdi:rotate-right
+    on_press:
+      - script.execute:
+          id: start_cycle
+          cycle: "spin"
+          duration_s: !lambda 'return (int) (id(num_spin_min).state * 60);'
+
+  - platform: template
+    name: "Start Drain"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 30
+    icon: mdi:water-pump
+    on_press:
+      - script.execute:
+          id: start_cycle
+          cycle: "drain"
+          duration_s: !lambda 'return (int) (id(num_drain_min).state * 60);'
+
+  - platform: template
+    name: "Start Fill"
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 40
+    icon: mdi:valve
+    on_press:
+      - script.execute:
+          id: start_cycle
+          cycle: "fill"
+          duration_s: !lambda 'return (int) (id(num_fill_min).state * 60);'
+
+number:
+  - platform: template
+    name: "Wash Minutes"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 10
+    id: num_wash_min
+    optimistic: true
+    restore_value: true
+    min_value: 1
+    max_value: 60
+    step: 1
+    initial_value: 10
+    mode: box
+    icon: mdi:timer
+
+  - platform: template
+    name: "Spin Minutes"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 20
+    id: num_spin_min
+    optimistic: true
+    restore_value: true
+    min_value: 1
+    max_value: 15
+    step: 1
+    initial_value: 5
+    mode: box
+    icon: mdi:rotate-right
+
+  - platform: template
+    name: "Drain Minutes"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 30
+    id: num_drain_min
+    optimistic: true
+    restore_value: true
+    min_value: 1
+    max_value: 15
+    step: 1
+    initial_value: 5
+    mode: box
+    icon: mdi:water-pump
+
+  - platform: template
+    name: "Fill Minutes"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 40
+    id: num_fill_min
+    optimistic: true
+    restore_value: true
+    min_value: 1
+    max_value: 10
+    step: 1
+    initial_value: 5
+    mode: box
+    icon: mdi:valve
+
+  - platform: template
+    name: "Stop Coast Seconds"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 100
+    id: num_stop_coast
+    optimistic: true
+    restore_value: true
+    min_value: 0
+    max_value: 60
+    step: 5
+    initial_value: 20
+    mode: box
+    unit_of_measurement: "s"
+    icon: mdi:refresh-auto
+
+  - platform: template
+    name: "Wash Pulse Seconds"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 80
+    id: num_wash_on
+    optimistic: true
+    restore_value: true
+    min_value: 0.5
+    max_value: 10
+    step: 0.5
+    initial_value: 1.5
+    mode: box
+    unit_of_measurement: "s"
+    icon: mdi:tune-vertical
+
+  - platform: template
+    name: "Wash Dead Time Seconds"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 90
+    id: num_wash_dead
+    optimistic: true
+    restore_value: true
+    min_value: 0.5
+    max_value: 5
+    step: 0.25
+    initial_value: 0.75
+    mode: box
+    unit_of_measurement: "s"
+    icon: mdi:tune-vertical
+
+select:
+  - platform: template
+    name: "Spin Motor"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 70
+    id: sel_spin_motor
+    optimistic: true
+    restore_value: true
+    options: ["A", "B"]
+    initial_option: "A"
+    icon: mdi:rotate-right
+    entity_category: config
+    on_value:
+      then:
+        - lambda: 'id(g_spin_motor) = x;'
+
+  - platform: template
+    name: "Wash Preset"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 50
+    id: sel_wash_preset
+    optimistic: true
+    restore_value: true
+    options: ["5", "10", "20", "30"]
+    initial_option: "10"
+    icon: mdi:timer-check
+    on_value:
+      then:
+        - number.set:
+            id: num_wash_min
+            value: !lambda 'return atof(x.c_str());'
+
+  - platform: template
+    name: "Spin Preset"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 60
+    id: sel_spin_preset
+    optimistic: true
+    restore_value: true
+    options: ["10", "20", "30"]
+    initial_option: "10"
+    icon: mdi:rotate-clockwise
+    on_value:
+      then:
+        - number.set:
+            id: num_spin_min
+            value: !lambda 'return atof(x.c_str());'
+
+text:
+  - platform: template
+    name: "Program Quick"
+    web_server:
+      sorting_group_id: grp_programs
+      sorting_weight: 10
+    id: prog_quick
+    mode: text
+    optimistic: true
+    restore_value: true
+    max_length: 255
+    initial_value: "WASH:600, DRAIN:30, SPIN:300"
+
+  - platform: template
+    name: "Program Normal"
+    web_server:
+      sorting_group_id: grp_programs
+      sorting_weight: 20
+    id: prog_normal
+    mode: text
+    optimistic: true
+    restore_value: true
+    max_length: 255
+    initial_value: "WASH:480, DRAIN:60"
+
+  - platform: template
+    name: "Program Custom"
+    web_server:
+      sorting_group_id: grp_programs
+      sorting_weight: 30
+    id: prog_custom
+    mode: text
+    optimistic: true
+    restore_value: true
+    max_length: 255
+    initial_value: ""
+
+text_sensor:
+  - platform: template
+    name: "Cycle State"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 20
+    icon: mdi:state-machine
+    lambda: 'return id(g_mode);'
+    update_interval: 2s
+
+  - platform: template
+    name: "Current Program"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 10
+    icon: mdi:washing-machine
+    update_interval: 1s
+    lambda: 'return id(g_prog_name);' 
+
+binary_sensor:
+  - platform: template
+    name: "Cycle Running"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 60
+    device_class: running
+    lambda: 'return id(g_running);'
+
+# ============ reporting for the HA dashboard (progress ring etc.) ============
+
+sensor:
+  - platform: template
+    name: "Cycle Progress"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 30
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    icon: mdi:progress-clock
+    update_interval: 1s
+    lambda: |-
+      if (!id(g_running) || id(g_step_total_s) <= 0) return 0.0;
+      uint32_t elapsed = millis() - id(g_step_start);
+      float pct = 100.0f * (float) elapsed / ((float) id(g_step_total_s) * 1000.0f);
+      return pct > 100.0f ? 100.0f : pct;
+
+  - platform: template
+    name: "Cycle Elapsed"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 40
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    icon: mdi:timer
+    update_interval: 1s
+    lambda: |-
+      if (!id(g_running) || id(g_step_total_s) <= 0) return 0.0;
+      return (float) ((millis() - id(g_step_start)) / 1000);
+
+  - platform: template
+    name: "Cycle Remaining"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 50
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    icon: mdi:timer-sand
+    update_interval: 1s
+    lambda: |-
+      if (!id(g_running) || id(g_step_total_s) <= 0) return 0.0;
+      uint32_t elapsed = (millis() - id(g_step_start)) / 1000;
+      int remain = id(g_step_total_s) - (int) elapsed;
+      return (float) (remain < 0 ? 0 : remain);
+

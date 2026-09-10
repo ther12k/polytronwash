@@ -1,0 +1,12 @@
+# Local credentials (WiFi, API key, AP password) — never commit
+secrets.yaml
+
+# ESPHome build cache, virtualenv, Python cache, firmware images
+.esphome/
+.venv/
+__pycache__/
+*.bin
+
+# Serial / boot / OTA logs (contain SSID, MAC and IP addresses)
+*.txt
+*.log

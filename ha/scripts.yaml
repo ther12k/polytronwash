@@ -1,0 +1,93 @@
+# Voice/dashboard presets for the Polytron washer.
+# Google exposes scripts as scenes -> "Hey Google, activate Wash 20 Minutes"
+
+wash_5:
+  alias: "Wash 5 Minutes"
+  icon: mdi:washing-machine
+  sequence:
+    - action: number.set_value
+      target: {entity_id: number.polytron_washing_machine_wash_minutes}
+      data: {value: 5}
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_wash}
+
+wash_10:
+  alias: "Wash 10 Minutes"
+  icon: mdi:washing-machine
+  sequence:
+    - action: number.set_value
+      target: {entity_id: number.polytron_washing_machine_wash_minutes}
+      data: {value: 10}
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_wash}
+
+wash_20:
+  alias: "Wash 20 Minutes"
+  icon: mdi:washing-machine
+  sequence:
+    - action: number.set_value
+      target: {entity_id: number.polytron_washing_machine_wash_minutes}
+      data: {value: 20}
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_wash}
+
+wash_30:
+  alias: "Wash 30 Minutes"
+  icon: mdi:washing-machine
+  sequence:
+    - action: number.set_value
+      target: {entity_id: number.polytron_washing_machine_wash_minutes}
+      data: {value: 30}
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_wash}
+
+spin_10:
+  alias: "Spin 10 Minutes"
+  icon: mdi:rotate-right
+  sequence:
+    - action: number.set_value
+      target: {entity_id: number.polytron_washing_machine_spin_minutes}
+      data: {value: 10}
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_spin}
+
+spin_20:
+  alias: "Spin 20 Minutes"
+  icon: mdi:rotate-right
+  sequence:
+    - action: number.set_value
+      target: {entity_id: number.polytron_washing_machine_spin_minutes}
+      data: {value: 20}
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_spin}
+
+spin_30:
+  alias: "Spin 30 Minutes"
+  icon: mdi:rotate-right
+  sequence:
+    - action: number.set_value
+      target: {entity_id: number.polytron_washing_machine_spin_minutes}
+      data: {value: 30}
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_spin}
+
+drain_now:
+  alias: "Drain Now"
+  icon: mdi:water-pump
+  sequence:
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_drain}
+
+washer_stop:
+  alias: "Washer Stop"
+  icon: mdi:octagon
+  sequence:
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_stop_all}
+
+fill_now:
+  alias: "Fill Water"
+  icon: mdi:water
+  sequence:
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_fill}
