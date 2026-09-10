@@ -12,6 +12,47 @@ Google Assistant ──> Home Assistant ──> ESPHome API ──> ESP32 ──
 Cursor / Claude  ──> ESPHome MCP  ──────────────┘            (native API, port 6053)
 ```
 
+## The device's own web UI
+
+The firmware embeds a **custom appliance UI** (`ui/www.js` — vanilla JS,
+no framework, no build step, no CDN) served straight from flash via
+`web_server.js_include`: ~8 KB gzipped vs ~140 KB for the stock ESPHome
+frontend. It drives the device over the ESPHome REST API, with `/events`
+SSE pushing state and logs live.
+
+| Desktop (≥ 900 px) | Mobile |
+|--------------------|--------|
+| ![Desktop UI — cycle running, STOP bar pinned](docs/screenshots/ui-desktop-running.png) | ![Mobile UI](docs/screenshots/ui-mobile.png) |
+
+![Manual relays and live debug log](docs/screenshots/ui-relays-log.png)
+
+- **Cycle Status** — program + step chips, whole-program progress bar,
+  elapsed/remaining, free heap.
+- **Quick Actions** — start wash/spin/drain/fill or a saved program.
+  Everything except **STOP ALL** locks while a cycle runs, and a sticky
+  STOP bar follows you down the page.
+- **Program Sequences** — the three persistent `NAME:seconds` slots with
+  live validation and a computed total (SPIN steps include the 15 s
+  coast).
+- **Timing & Presets** — steppers and preset chips for every
+  runtime-tunable number.
+- **Manual Relays** (collapsed) — direct relay control for testing;
+  firmware interlocks still apply.
+- **OTA Update + Debug Log** (log collapsed) — flash a firmware `.bin`
+  from the browser and watch the device log live.
+
+Responsive: two-column grid on desktop, single column with a 2×2
+quick-action grid on phones. No auth by default (trusted local WiFi); a
+digest-auth block is commented in the yaml if you ever want it.
+`ui/mock-server.py` fakes the device API so the UI can be exercised
+offline.
+
+> **Router down?** About a minute after losing the configured AP the
+> ESP32 starts its own hotspot (**Polytron Wash Setup**) and serves the
+> *same* full UI at `http://192.168.4.1` — control and OTA work with no
+> LAN at all. It rejoins your WiFi automatically once the router is
+> back.
+
 ## Hardware architecture (v3 — `polytron-v3.yaml`)
 
 | Relay | GPIO | Drives | Notes |
@@ -99,17 +140,6 @@ taps or one voice command.
   **Settings → Dashboards → Resources** as
   `/local/polytron/polytron-washer-card.js` (type: module).
 
-The device serves its own **custom appliance web UI** (`ui/www.js`,
-vanilla JS — no framework, no build step, no CDN) embedded in flash via
-`web_server.js_include`. Dark, mobile-first: cycle status with
-program-level progress, quick actions with running-state locking,
-program editor, timing/presets, manual relays (advanced, collapsed),
-browser OTA upload and live log — all over the ESPHome REST API with
-`/events` SSE push. No auth by default (trusted local WiFi); a digest-auth block is
-commented in the yaml if you ever want it. ~8 KB gzipped vs ~140 KB for
-the stock frontend. `ui/mock-server.py` fakes the device API for offline UI
-testing.
-
 ## Getting started
 
 ```bash
@@ -118,6 +148,10 @@ pip install esphome                    # or use the ESPHome docker image
 esphome run polytron-v3.yaml           # first flash over USB, then OTA
 esphome logs polytron-v3.yaml          # live logs over WiFi
 ```
+
+Once flashed, the web UI is at `http://polytron-wash2.local/` (or the
+device's IP — the same UI also appears on the fallback hotspot at
+`192.168.4.1`).
 
 `api_*.py` are standalone [aioesphomeapi](https://github.com/esphome/aioesphomeapi)
 test scripts (relay matrix test, live cycle watcher, entity snapshot…).
@@ -131,6 +165,7 @@ polytron-v3.yaml        current firmware — direct motor/drain/spin control
 polytron.yaml           legacy v2 — relay "button bridge" across the panel buttons
 ui/www.js               custom ESPHome web UI (embedded via js_include)
 ui/mock-server.py       offline mock of the ESPHome REST/SSE API for UI tests
+docs/screenshots/       web UI screenshots used by this README
 secrets.yaml.example    template for the git-ignored credentials
 common.py               secrets loader for the test scripts
 api_*.py                aioesphomeapi test/control scripts

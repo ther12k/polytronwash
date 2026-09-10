@@ -103,7 +103,8 @@ class Handler(BaseHTTPRequestHandler):
                 # browser sees the result within 1 s, like the real device
                 for d in STATE.values():
                     ev = dict(d)
-                    if d["id"] == "sensor/Program Progress":
+                    if d["id"] == "sensor/Program Progress" and \
+                            STATE["binary_sensor/Cycle Running"]["value"]:
                         v = min(100, 71 + i)
                         ev = {"id": d["id"], "state": str(v), "value": v}
                     self._send_event("state", json.dumps(ev))
@@ -142,6 +143,9 @@ class Handler(BaseHTTPRequestHandler):
                 setst("text_sensor/Current Program", "STOPPED", "STOPPED")
                 for sid in [s for s in STATE if s.startswith("switch/")]:
                     setst(sid, "OFF", False)
+                for sid in ["sensor/Cycle Progress", "sensor/Program Progress",
+                            "sensor/Program Elapsed", "sensor/Program Remaining"]:
+                    setst(sid, "0", 0)
             elif btn.startswith(("Start", "Run")):
                 setst("binary_sensor/Cycle Running", "ON", True)
                 setst("text_sensor/Current Program", btn.upper(), btn.upper())
