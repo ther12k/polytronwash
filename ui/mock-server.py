@@ -57,7 +57,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _log(self, kind, detail=""):
         with open(CALLS, "a") as f:
-            f.write(f"{kind} {detail}\n")
+            f.write(f"{time.strftime('%H:%M:%S')} {kind} {detail}\n")
 
     def do_GET(self):
         url = urlparse(self.path)
@@ -92,11 +92,10 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def send_events(self):
+        i = 0
         try:
             for d in STATE.values():
-                full = dict(d, name=d["id"].split("/", 1)[1], domain=d["id"].split("/", 1)[0])
-                self._send_event("state_detail_all", json.dumps(full))
-            i = 0
+                self._send_event("state", json.dumps(d))
             while True:
                 time.sleep(1)
                 i += 1
@@ -110,8 +109,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_event("state", json.dumps(ev))
                 if i % 3 == 0:
                     self._send_event("log", f"22:31:{i:02d} [I] washer  mock log line {i}")
-        except (BrokenPipeError, ConnectionResetError, OSError):
-            pass
+        except Exception as e:
+            print(f"[sse] thread exit after {i}s: {type(e).__name__}: {e}", flush=True)
+            raise
 
     def _send_event(self, name, data):
         self.wfile.write(f"event: {name}\ndata: {data}\n\n".encode())
@@ -127,7 +127,7 @@ class Handler(BaseHTTPRequestHandler):
         self._log("POST", detail)
         # simulate switch flips so UI state moves after a toggle command
         if url.path.startswith("/switch/") and "/turn_" in url.path:
-            sid = unquote(url.path.split("/")[2])
+            sid = "switch/" + unquote(url.path.split("/")[2])
             on = url.path.endswith("turn_on")
             if sid in STATE:
                 STATE[sid] = {"id": sid, "state": "ON" if on else "OFF", "value": on}
@@ -156,6 +156,8 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     CALLS.unlink(missing_ok=True)
     threading.Thread(target=lambda: time.sleep(3600), daemon=True).start()
+    ThreadingHTTPServer.request_queue_size = 64
+    ThreadingHTTPServer.daemon_threads = True
     srv = ThreadingHTTPServer(("127.0.0.1", 8999), Handler)
     print("mock ESPHome on http://127.0.0.1:8999/")
     srv.serve_forever()
