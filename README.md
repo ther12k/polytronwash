@@ -82,7 +82,7 @@ taps or one voice command.
 - `number.*` — wash/spin/drain/fill minutes, wash pulse + dead time, spin coast seconds
 - `select.*` — wash preset, spin preset, spin direction (A/B)
 - `text.*` — the three editable program slots
-- `sensor.*` — cycle state, progress %, elapsed/remaining
+- `sensor.*` — cycle state, step + whole-program progress %, elapsed/remaining, free heap
 - `binary_sensor.*` — cycle running
 
 ## Home Assistant setup (`ha/`)
@@ -99,11 +99,16 @@ taps or one voice command.
   **Settings → Dashboards → Resources** as
   `/local/polytron/polytron-washer-card.js` (type: module).
 
-The device also runs its own **web UI** (port 80) with the same entities
-grouped into panes — Status, Start a Cycle, Timing & Presets, Manual
-Relays, Program Sequences — as a fallback when HA is down. The UI is
-**embedded in the firmware** (`local: true`, ~140 KB flash, no RAM cost),
-so the page loads even with no internet — no CDN dependency.
+The device serves its own **custom appliance web UI** (`ui/www.js`,
+vanilla JS — no framework, no build step, no CDN) embedded in flash via
+`web_server.js_include`. Dark, mobile-first: cycle status with
+program-level progress, quick actions with running-state locking,
+program editor, timing/presets, manual relays (advanced, collapsed),
+browser OTA upload and live log — all over the ESPHome REST API with
+`/events` SSE push. Protected by digest auth (`web_username` /
+`web_password` in secrets.yaml). ~8 KB gzipped vs ~140 KB for the stock
+frontend. `ui/mock-server.py` fakes the device API for offline UI
+testing.
 
 ## Getting started
 
@@ -124,6 +129,8 @@ to override the device hostname.
 ```
 polytron-v3.yaml        current firmware — direct motor/drain/spin control
 polytron.yaml           legacy v2 — relay "button bridge" across the panel buttons
+ui/www.js               custom ESPHome web UI (embedded via js_include)
+ui/mock-server.py       offline mock of the ESPHome REST/SSE API for UI tests
 secrets.yaml.example    template for the git-ignored credentials
 common.py               secrets loader for the test scripts
 api_*.py                aioesphomeapi test/control scripts

@@ -129,9 +129,14 @@ captive_portal:
 web_server:
   version: 3
   port: 80
-  # Embed the UI in flash (142 KB PROGMEM, no RAM cost) so the fallback page
-  # loads even without internet — the default pulls the UI from a CDN.
-  local: true
+  # Custom appliance UI (ui/www.js, vanilla JS) embedded in flash — replaces
+  # the stock frontend. No CDN, no internet needed. ~8 KB gzipped vs 142 KB stock.
+  js_include: ui/www.js
+  js_url: ""
+  auth:
+    username: !secret web_username
+    password: !secret web_password
+    type: digest
   sorting_groups:
     - id: grp_status
       name: "Cycle Status"
@@ -185,6 +190,14 @@ globals:
     type: std::string
     restore_value: true
     initial_value: '"A"'
+  - id: g_prog_start
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: g_prog_total_s
+    type: int
+    restore_value: false
+    initial_value: '0'
 
 script:
   # ============ cycle primitives (only way relays ever move) ============
@@ -315,6 +328,7 @@ script:
           id(g_running) = false;
           id(g_mode) = "IDLE";
           id(g_step_total_s) = 0;
+          id(g_prog_total_s) = 0;
           id(g_prog_name) = "STOPPED";
           ESP_LOGW("washer", "STOP ALL complete");
 
@@ -340,6 +354,9 @@ script:
                 std::string upper = cycle;
                 for (char &c : upper) c = toupper((unsigned char) c);
                 id(g_prog_name) = upper + " " + to_string(duration_s / 60) + "min";
+                id(g_prog_start) = millis();
+                // nominal window; SPIN carries its fixed 15 s prep+coast
+                id(g_prog_total_s) = duration_s + (cycle == "spin" ? 15 : 0);
             - if:
                 condition:
                   lambda: 'return cycle == "wash";'
@@ -376,6 +393,7 @@ script:
                 id(g_running) = false;
                 id(g_mode) = "IDLE";
                 id(g_step_total_s) = 0;
+                id(g_prog_total_s) = 0;
                 id(g_prog_name) = "DONE " + cycle;
                 ESP_LOGI("washer", "Cycle '%s' finished", cycle.c_str());
 
@@ -424,6 +442,11 @@ script:
                   id(g_idx) = 0;
                   id(g_running) = true;
                   id(g_prog_name) = name;
+                  int total = 0;
+                  for (const auto &t : id(g_tokens))
+                    total += atoi(t.c_str() + t.find(':') + 1) + (t.rfind("SPIN:", 0) == 0 ? 15 : 0);
+                  id(g_prog_total_s) = total;
+                  id(g_prog_start) = millis();
                   ESP_LOGI("washer", "Sequence '%s' accepted (%u steps)",
                            name.c_str(), (unsigned) id(g_tokens).size());
                 } else {
@@ -465,6 +488,7 @@ script:
                 if (id(g_running)) {
                   id(g_running) = false;
                   id(g_mode) = "IDLE";
+                  id(g_prog_total_s) = 0;
                   ESP_LOGI("washer", "Sequence finished");
                 }
 
@@ -642,7 +666,7 @@ number:
     optimistic: true
     restore_value: true
     min_value: 1
-    max_value: 15
+    max_value: 30
     step: 1
     initial_value: 5
     mode: box
@@ -888,3 +912,60 @@ sensor:
       int remain = id(g_step_total_s) - (int) elapsed;
       return (float) (remain < 0 ? 0 : remain);
 
+
+  # Whole-program progress (nominal time; step-level sensors above stay as-is)
+
+  - platform: template
+    name: "Program Progress"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 31
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    icon: mdi:chart-line
+    update_interval: 1s
+    lambda: |-
+      if (!id(g_running) || id(g_prog_total_s) <= 0) return 0.0;
+      uint32_t elapsed = millis() - id(g_prog_start);
+      float pct = 100.0f * (float) elapsed / ((float) id(g_prog_total_s) * 1000.0f);
+      return pct > 100.0f ? 100.0f : pct;
+
+  - platform: template
+    name: "Program Elapsed"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 41
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    icon: mdi:timer-outline
+    update_interval: 1s
+    lambda: |-
+      if (!id(g_running) || id(g_prog_total_s) <= 0) return 0.0;
+      return (float) ((millis() - id(g_prog_start)) / 1000);
+
+  - platform: template
+    name: "Program Remaining"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 51
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    icon: mdi:hourglass
+    update_interval: 1s
+    lambda: |-
+      if (!id(g_running) || id(g_prog_total_s) <= 0) return 0.0;
+      uint32_t elapsed = (millis() - id(g_prog_start)) / 1000;
+      int remain = id(g_prog_total_s) - (int) elapsed;
+      return (float) (remain < 0 ? 0 : remain);
+
+  # Free heap — appliance health + UI memory-regression measurement
+  - platform: template
+    name: "Free Heap"
+    web_server:
+      sorting_group_id: grp_status
+      sorting_weight: 90
+    unit_of_measurement: "KB"
+    accuracy_decimals: 0
+    icon: mdi:memory
+    update_interval: 30s
+    lambda: 'return (float) ESP.getFreeHeap() / 1024.0f;'

@@ -10,3 +10,4 @@ __pycache__/
 # Serial / boot / OTA logs (contain SSID, MAC and IP addresses)
 *.txt
 *.log
+ui/mock-calls.log
