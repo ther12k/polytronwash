@@ -45,12 +45,13 @@ SSE pushing state and logs live.
 
 Responsive: two-column grid on desktop, single column with a 2×2
 quick-action grid on phones (`www.js` injects its own viewport meta —
-ESPHome's stock shell omits one). **Theme follows your device
-automatically** — light or dark via the OS setting, like the HA card;
-the mobile browser chrome (status-bar color) matches too. No auth by
-default (trusted local WiFi); a digest-auth block is commented in the
-yaml if you ever want it. `ui/mock-server.py` fakes the device API so
-the UI can be exercised offline.
+ESPHome's stock shell omits one). The header has a persistent **Dark /
+Light / System** selector: System follows your device automatically,
+while the other two choices override it; the mobile browser chrome
+(status-bar color) matches the effective theme too. No auth by default
+(trusted local WiFi); a digest-auth block is commented in the yaml if you
+ever want it. `ui/mock-server.py` fakes the device API so the UI can be
+exercised offline.
 
 > **Router down?** About a minute after losing the configured AP the
 > ESP32 starts its own hotspot (**Polytron Wash Setup**) and serves the

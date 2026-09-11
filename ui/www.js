@@ -243,6 +243,13 @@ function renderApp() {
     <div class="avatar">🧺</div>
     <div class="hdr-t"><h1>Polytron Washing Machine</h1>
       <div class="tag">direct-drive conversion</div></div>
+    <label class="theme-picker"><span class="sr-only">Theme</span>
+      <select id="theme-select" aria-label="Theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="system">System</option>
+      </select>
+    </label>
     <span class="pill">…</span>
   </header>`;
 
@@ -507,6 +514,14 @@ function render() {
 // ─────────────────────────────
 
 function bindEvents(root) {
+  const themeSelect = root.getElementById("theme-select");
+  themeSelect.value = themePreference;
+  themeSelect.addEventListener("change", () => {
+    themePreference = THEME_MODES.has(themeSelect.value) ? themeSelect.value : "system";
+    try { localStorage.setItem(THEME_KEY, themePreference); } catch (_) { /* storage unavailable */ }
+    applyThemePreference(root);
+  });
+
   root.querySelectorAll(".qa[data-btn]").forEach((b) =>
     b.addEventListener("click", () => api.pressButton(ENTITIES.button[b.dataset.btn])));
 
@@ -589,21 +604,61 @@ function uploadOta(root) {
 // Bootstrap
 // ─────────────────────────────
 
+const THEME_KEY = "polytron-theme";
 const THEME_BG = "#0e1117";        // dark — keep in sync with the CSS palette
 const THEME_BG_LIGHT = "#f2f4f8";  // light
+const THEME_MODES = new Set(["dark", "light", "system"]);
+
+function readThemePreference() {
+  try {
+    const value = localStorage.getItem(THEME_KEY);
+    return THEME_MODES.has(value) ? value : "system";
+  } catch (_) {
+    return "system";
+  }
+}
+
+let themePreference = readThemePreference();
+
+function systemPrefersLight() {
+  return !!(window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches);
+}
+
+function effectiveTheme() {
+  return themePreference === "system"
+    ? (systemPrefersLight() ? "light" : "dark")
+    : themePreference;
+}
+
+function applyThemePreference(root) {
+  const host = document.querySelector("esp-app");
+  if (host) {
+    host.dataset.theme = themePreference;
+    host.style.colorScheme = effectiveTheme();
+  }
+  const select = root && root.getElementById("theme-select");
+  if (select && select.value !== themePreference) select.value = themePreference;
+  applyChromeTheme();
+}
 
 function applyChromeTheme() {
-  // page + mobile browser chrome follow the OS scheme, like the HA card
-  const light = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches;
+  // page + mobile browser chrome follow the selected/effective scheme
+  const light = effectiveTheme() === "light";
   const bg = light ? THEME_BG_LIGHT : THEME_BG;
+  const host = document.querySelector("esp-app");
+  if (host) host.style.colorScheme = light ? "light" : "dark";
   document.documentElement.style.background = bg;
-  if (document.body) document.body.style.background = bg;
+  document.documentElement.style.colorScheme = light ? "light" : "dark";
+  if (document.body) {
+    document.body.style.background = bg;
+    document.body.style.colorScheme = light ? "light" : "dark";
+  }
   const meta = document.querySelector("meta[name=theme-color]");
   if (meta) meta.content = bg;
 }
 
 const CSS_TEXT = `
-:host{display:block;background:var(--bg);min-height:100vh;
+  :host{display:block;background:var(--bg);min-height:100vh;color-scheme:dark;
   --bg:#0e1117;--card:#161b26;--card2:#1c2333;--line:#232c40;
   --tx:#e6eaf2;--mut:#8b93a5;--acc:#4a9eff;--red:#ef4444;--ok:#22c55e;
   --acc-soft:#12233f;--ic-bg:#12233f;--ic-fg:#4a9eff;
@@ -611,13 +666,19 @@ const CSS_TEXT = `
   --warn-bg:#2a1c10;--warn-bd:#78350f;--warn-fg:#f59e0b;
   --bar-idle:#3a4356}
 @media (prefers-color-scheme: light){
-  :host{--bg:#f2f4f8;--card:#ffffff;--card2:#eef2f7;--line:#dbe2ec;
+  :host([data-theme="light"]),:host([data-theme="system"]){--bg:#f2f4f8;--card:#ffffff;--card2:#eef2f7;--line:#dbe2ec;
     --tx:#18202e;--mut:#5c6575;--acc:#1e88fe;--red:#dc2626;--ok:#16a34a;
     --acc-soft:#cfe4ff;--ic-bg:#dbeafe;--ic-fg:#1e88fe;
     --stop-bg:#fee2e2;--stop-bd:#fca5a5;--stop-fg:#b91c1c;
     --warn-bg:#fef3c7;--warn-bd:#f59e0b;--warn-fg:#92400e;
     --bar-idle:#cfd6e0}
 }
+:host([data-theme="light"]){--bg:#f2f4f8;--card:#ffffff;--card2:#eef2f7;--line:#dbe2ec;
+  --tx:#18202e;--mut:#5c6575;--acc:#1e88fe;--red:#dc2626;--ok:#16a34a;
+  --acc-soft:#cfe4ff;--ic-bg:#dbeafe;--ic-fg:#1e88fe;
+  --stop-bg:#fee2e2;--stop-bd:#fca5a5;--stop-fg:#b91c1c;
+  --warn-bg:#fef3c7;--warn-bd:#f59e0b;--warn-fg:#92400e;
+  --bar-idle:#cfd6e0}
 *{box-sizing:border-box;margin:0}
 .app{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);
   color:var(--tx);min-height:100vh;max-width:760px;margin:0 auto;padding:14px 14px 90px;
@@ -631,6 +692,11 @@ const CSS_TEXT = `
   .app>*{margin:0}
 }
 .hdr{display:flex;align-items:center;gap:12px;padding:6px 2px}
+.theme-picker{display:flex;align-items:center}
+.theme-picker select{min-height:30px;max-width:92px;padding:4px 7px;border:1px solid var(--line);border-radius:8px;
+  background:var(--card2);color:var(--tx);font:600 11px system-ui,sans-serif;cursor:pointer}
+.theme-picker select:focus{outline:2px solid var(--acc);outline-offset:1px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .avatar{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#1e3a5f,#0d2440);
   display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid var(--line)}
 .hdr-t{flex:1}.hdr-t h1{font-size:17px;font-weight:700}
@@ -723,7 +789,8 @@ details.adv[open]>summary::before{transform:rotate(90deg)}
   display:flex;align-items:center;justify-content:space-between;gap:12px;background:#1c1216;
   border:1px solid #7f1d1d;border-radius:13px;padding:10px 10px 10px 16px;box-shadow:0 8px 30px rgba(0,0,0,.55);z-index:5}
 .stopbar-i{font-size:13px;color:var(--tx)}
-@media (max-width:600px){
+  @media (max-width:600px){
+  .theme-picker select{max-width:78px;padding-left:5px;padding-right:5px}
   .qa-grid{grid-template-columns:repeat(2,1fr)}
   .qa.stop{grid-column:span 2}
   .prog{grid-template-columns:1fr}
@@ -738,10 +805,12 @@ class WasherApp extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    // page background + mobile browser chrome follow the OS light/dark scheme
-    applyChromeTheme();
+    // page background + mobile browser chrome follow the selected/effective scheme
+    applyThemePreference();
     if (window.matchMedia) {
-      try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", applyChromeTheme); }
+      try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+        if (themePreference === "system") applyChromeTheme();
+      }); }
       catch (_) { /* older browsers: theme fixed at load */ }
     }
     // ESPHome's built-in shell omits the viewport meta — without it phones
