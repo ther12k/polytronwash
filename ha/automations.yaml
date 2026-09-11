@@ -15,11 +15,8 @@
 
 # Fill pump follows the washer's inlet valve. Works for every fill:
 # Start Fill, Rinse, and FILL: steps inside programs.
-# ONE-TIME SETUP: replace switch.REPLACE_ME_PUMP_PLUG below with your pump
-# plug's entity id (Settings > Devices after adding the plug to Home
-# Assistant — most "Google Home" plugs are Tuya/Smart Life behind the
-# scenes; add the Tuya integration with the same account). Until then
-# this automation only logs.
+# Pump plug: CozyLife smart socket via the cozylife_local integration
+# (local control, no cloud). Swap switch.smart_socket if the plug changes.
 - id: washer_fill_pump_follow
   alias: "Washer: fill pump follows inlet valve"
   trigger:
@@ -39,9 +36,9 @@
           sequence:
             - action: switch.turn_on
               target:
-                entity_id: switch.REPLACE_ME_PUMP_PLUG
+                entity_id: switch.smart_socket
       default:
         - action: switch.turn_off
           target:
-            entity_id: switch.REPLACE_ME_PUMP_PLUG
+            entity_id: switch.smart_socket
   mode: restart
