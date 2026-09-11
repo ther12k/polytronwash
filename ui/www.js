@@ -621,7 +621,8 @@ const CSS_TEXT = `
 .bar-lab{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin:5px 0 12px}
 .qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .qa{padding:12px 4px;border-radius:11px;border:1px solid var(--line);background:var(--card2);
-  color:var(--tx);font-size:12.5px;font-weight:600;cursor:pointer}
+  color:var(--tx);font-size:12.5px;font-weight:600;line-height:1.25;cursor:pointer;
+  min-width:0;overflow-wrap:break-word}
 .qa:hover:not(:disabled){border-color:var(--acc)}
 .qa.stop{background:#3f1d24;border-color:#7f1d1d;color:#fca5a5;font-weight:800}
 .qa.stop:hover{background:#7f1d1d;color:#fff}
@@ -704,6 +705,14 @@ class WasherApp extends HTMLElement {
     // dark theme beyond the card: page background + mobile chrome
     document.documentElement.style.background = THEME_BG;
     if (document.body) document.body.style.background = THEME_BG;
+    // ESPHome's built-in shell omits the viewport meta — without it phones
+    // render at ~980px virtual width and the layout stops being responsive
+    if (document.head && !document.querySelector("meta[name=viewport]")) {
+      const vp = document.createElement("meta");
+      vp.name = "viewport";
+      vp.content = "width=device-width, initial-scale=1";
+      document.head.appendChild(vp);
+    }
     if (document.head && !document.querySelector("meta[name=theme-color]")) {
       const meta = document.createElement("meta");
       meta.name = "theme-color";
