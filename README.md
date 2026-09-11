@@ -77,12 +77,15 @@ flip the substitution if yours are active-HIGH.
   one direction continuously (A or B — selectable in config via the
   `spin_motor` select, no rewiring) → coast (`spin_coast_s`) → drain OFF.
 - **DRAIN / FILL** — single solenoid for the configured duration.
-- **RINSE** — clean-water wash, no detergent, no spin: drain leftovers →
-  refill → agitate `Rinse Minutes` (default 3) → drain again. One button
-  press, voice command, or `rinse()` API action; uses the on-device
-  Drain/Fill/Rinse minute settings. A second variant, **Rinse No Drain**,
-  skips the leading drain for when the tub is already empty (after a
-  wash program or Keringkan).
+- **RINSE** — clean-water wash, no detergent, no spin: pre-drain (`Rinse
+  Drain Seconds`, default 45 s) → refill → agitate `Rinse Minutes`
+  (default 3 min) → drain again (same `Rinse Drain Seconds`). One button
+  press, voice command, or `rinse()` API action. A second variant,
+  **Rinse No Drain**, skips the leading pre-drain for when the tub is
+  already empty (after a wash program or Keringkan) — the trailing drain
+  still uses `Rinse Drain Seconds` so leftover water clears fully. Both
+  drain durations are runtime-tunable in HA or the device web UI without
+  re-flashing.
 - **STOP ALL** — motors + inlet cut instantly; if a spin was running the
   drum coasts `stop_coast_seconds` before the clutch brake engages.
 
@@ -129,7 +132,7 @@ taps or one voice command.
 
 - `button.*` — Start Wash/Spin/Drain/Fill/Rinse/Rinse No Drain, Run Quick/Normal/Custom, STOP ALL
 - `switch.*` — the four raw relays (manual/MCP control; interlocks still apply)
-- `number.*` — wash/spin/drain/fill/rinse minutes, spin drain seconds, wash pulse + dead time, spin coast seconds
+- `number.*` — wash/spin/drain/fill/rinse minutes, spin drain seconds, rinse drain seconds, wash pulse + dead time, spin coast seconds
 - `select.*` — wash preset, spin preset, spin direction (A/B)
 - `text.*` — the three editable program slots
 - `sensor.*` — cycle state, step + whole-program progress %, elapsed/remaining, free heap, WiFi signal (dBm)

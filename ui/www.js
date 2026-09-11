@@ -38,6 +38,7 @@ const ENTITIES = Object.freeze({
     fill: { name: "Fill Minutes", min: 1, max: 10, step: 1, dec: 0, unit: "min" },
     rinseM: { name: "Rinse Minutes", min: 1, max: 15, step: 1, dec: 0, unit: "min" },
     spinDrain: { name: "Spin Drain Seconds", min: 5, max: 300, step: 5, dec: 0, unit: "s" },
+    rinseDrain: { name: "Rinse Drain Seconds", min: 15, max: 180, step: 5, dec: 0, unit: "s" },
     pulse: { name: "Wash Pulse Seconds", min: 0.5, max: 10, step: 0.5, dec: 1, unit: "s" },
     dead: { name: "Wash Dead Time Seconds", min: 0.5, max: 5, step: 0.25, dec: 2, unit: "s" },
     coast: { name: "Stop Coast Seconds", min: 0, max: 60, step: 5, dec: 0, unit: "s" },
@@ -325,7 +326,8 @@ function renderApp() {
     stepper(N.pulse, "Wash pulse", "A/B run") +
     stepper(N.dead, "Wash dead time", "gap") +
     stepper(N.coast, "Stop coast", "brake delay") +
-    stepper(N.spinDrain, "Spin drain", "before motor"), "c-timing");
+    stepper(N.spinDrain, "Spin drain", "before motor") +
+    stepper(N.rinseDrain, "Rinse drain", "pre-drain + final drain"), "c-timing");
 
   const relay = (key, name) => {
     const on = (store.states[`switch/${name}`] || {}).state === "ON";

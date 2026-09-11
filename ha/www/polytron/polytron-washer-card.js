@@ -30,6 +30,7 @@ class PolytronWasherCard extends HTMLElement {
       n_drain: "number.polytron_washing_machine_drain_minutes",
       n_fill: "number.polytron_washing_machine_fill_minutes",
       n_rinse: "number.ruang_cuci_polytron_washing_machine_rinse_minutes",
+      n_rinsedr: "number.ruang_cuci_polytron_washing_machine_rinse_drain_seconds",
       n_spindr: "number.ruang_cuci_polytron_washing_machine_spin_drain_seconds",
       sel_wash: "select.polytron_washing_machine_wash_preset",
       sel_spin: "select.polytron_washing_machine_spin_preset",
@@ -155,6 +156,7 @@ class PolytronWasherCard extends HTMLElement {
         ${step(C.n_spin, "Spin", "🌀", 1, 15, presets(C.sel_spin, ["10","20","30"]))}
         ${step(C.n_spindr, "Spin Drain (s, before motor)", "🌊", 5, 300, null, 5)}
         ${step(C.n_rinse, "Rinse (agitate in clean water)", "🫧", 1, 15, null)}
+        ${step(C.n_rinsedr, "Rinse Drain (pre-drain + final drain)", "🌊", 15, 180, null, 5)}
         ${step(C.n_wash_on, "Wash Pulse (A/B run time)", "⚙", 0.5, 10, null, 0.5)}
         ${step(C.n_wash_dead, "Wash Dead Time (gap)", "⏸", 0.5, 5, null, 0.25)}
       </div>`;
@@ -240,7 +242,8 @@ class PolytronWasherCard extends HTMLElement {
       .tg{width:40px;height:22px;background:#d1d5db;border-radius:999px;position:relative;cursor:pointer;transition:.2s;flex:0 0 auto}
       .tg.on{background:#1e88fe}.kn{position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s}
       .tg.on .kn{left:20px}
-      .qarow{display:flex;gap:8px}.qa{flex:1;text-align:center;cursor:pointer}
+      .qarow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.qa{text-align:center;cursor:pointer}
+      @media(max-width:480px){.qarow{grid-template-columns:repeat(2,1fr)}.qarow .qa.r{grid-column:span 2}}
       .qa-c{width:52px;height:52px;border-radius:16px;background:#dbeafe;color:#1e88fe;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 4px}
       .qa.r .qa-c{background:#fee2e2;color:#dc2626}.qa-t{font-size:11px;font-weight:600}
       .step{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6}

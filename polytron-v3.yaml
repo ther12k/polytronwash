@@ -647,6 +647,9 @@ button:
 
   # Rinse = clean-water wash, no detergent: drain leftovers, refill,
   # agitate Rinse Minutes, drain. No spin (rinse-only by design).
+  # Both the leading pre-drain and the trailing drain use Rinse Drain Seconds
+  # (num_rinse_drain_s, default 45 s, runtime-tunable) so they're independent
+  # of the standalone Drain Minutes setting.
   - platform: template
     name: "Start Rinse"
     id: btn_start_rinse
@@ -660,14 +663,15 @@ button:
           name: "RINSE"
           seq: !lambda |-
             char b[128];
-            const int d = (int) (id(num_drain_min).state * 60);
-            const int f = (int) (id(num_fill_min).state * 60);
-            const int r = (int) (id(num_rinse_min).state * 60);
-            snprintf(b, sizeof(b), "DRAIN:%d, FILL:%d, WASH:%d, DRAIN:%d", d, f, r, d);
+            const int rd = (int) id(num_rinse_drain_s).state;  // rinse drain, seconds
+            const int f  = (int) (id(num_fill_min).state * 60);
+            const int r  = (int) (id(num_rinse_min).state * 60);
+            snprintf(b, sizeof(b), "DRAIN:%d, FILL:%d, WASH:%d, DRAIN:%d", rd, f, r, rd);
             return std::string(b);
 
   # Same rinse but skips the leading drain — use when the tub is already
-  # empty (wash programs end drained, or after Keringkan).
+  # empty (wash programs end drained, or after Keringkan). The trailing
+  # drain still uses Rinse Drain Seconds so leftover water clears fully.
   - platform: template
     name: "Start Rinse No Drain"
     id: btn_start_rinse_nd
@@ -681,10 +685,10 @@ button:
           name: "RINSE"
           seq: !lambda |-
             char b[96];
-            const int d = (int) (id(num_drain_min).state * 60);
-            const int f = (int) (id(num_fill_min).state * 60);
-            const int r = (int) (id(num_rinse_min).state * 60);
-            snprintf(b, sizeof(b), "FILL:%d, WASH:%d, DRAIN:%d", f, r, d);
+            const int rd = (int) id(num_rinse_drain_s).state;  // rinse drain, seconds
+            const int f  = (int) (id(num_fill_min).state * 60);
+            const int r  = (int) (id(num_rinse_min).state * 60);
+            snprintf(b, sizeof(b), "FILL:%d, WASH:%d, DRAIN:%d", f, r, rd);
             return std::string(b);
 
 number:
@@ -780,6 +784,25 @@ number:
     mode: box
     unit_of_measurement: "s"
     icon: mdi:water-pump
+
+  # How long the drain runs at the start (Rinse only) and end (both rinses)
+  # of every rinse cycle. 45 s is enough to empty the tub without waiting
+  # the full Drain Minutes. Runtime-tunable — no re-flash to adjust.
+  - platform: template
+    name: "Rinse Drain Seconds"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 55
+    id: num_rinse_drain_s
+    optimistic: true
+    restore_value: true
+    min_value: 15
+    max_value: 180
+    step: 5
+    initial_value: 45
+    mode: box
+    unit_of_measurement: "s"
+    icon: mdi:water
 
   - platform: template
     name: "Stop Coast Seconds"
