@@ -292,8 +292,10 @@ class PolytronWasherCard extends HTMLElement {
     const sr = this.shadowRoot;
     sr.querySelectorAll("[data-dom]").forEach(el => {
       el.addEventListener("click", () => {
-        this.call(el.dataset.dom, el.dataset.svc, { entity_id: el.dataset.id, ...(el.dataset.v ? { value: parseFloat(el.dataset.v) } : {}), ...(el.dataset.v && el.dataset.dom === "select" ? { option: el.dataset.v } : {}) });
-        if (el.dataset.dom === "select") { el.dataset.svc = "select_option"; this.call("select", "select_option", { entity_id: el.dataset.id, option: el.dataset.v }); }
+        const d = el.dataset;
+        if (d.dom === "select") this.call("select", "select_option", { entity_id: d.id, option: d.v });
+        else if (d.v) this.call(d.dom, d.svc, { entity_id: d.id, value: parseFloat(d.v) });
+        else this.call(d.dom, d.svc, { entity_id: d.id });
       });
     });
     sr.querySelectorAll("[data-tab]").forEach(el => el.addEventListener("click", () => { this._tab = el.dataset.tab; this._render(); }));
