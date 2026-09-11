@@ -263,8 +263,14 @@ function renderApp() {
       </div>
     </div>`, "c-status");
 
+  // icon set mirrors the HA card (ha/www/polytron/polytron-washer-card.js)
+  const QA_ICONS = { wash: "▶", spin: "🌀", drain: "💧", fill: "🚿",
+                     rinse: "🫧", rinseND: "🫧", stop: "■",
+                     quick: "⚡", normal: "🍃", custom: "⚙" };
   const qa = (label, key, cls) =>
-    `<button class="qa ${cls || ""}" data-btn="${key}">${label}</button>`;
+    `<button class="qa ${cls || ""}" data-btn="${key}">
+       <span class="qa-ic">${QA_ICONS[key] || ""}</span><span class="qa-t">${label}</span>
+     </button>`;
   html += card("Quick Actions", "", `
     <div class="qa-grid">
       ${qa("Start Wash", "wash")}${qa("Start Spin", "spin")}
@@ -390,7 +396,7 @@ function patchStatus(root, D) {
   stepEl.style.setProperty("--sc", D.modeColor);
   const bar = q(".bar-fill");
   bar.style.width = D.progPct + "%";
-  bar.style.background = D.running ? D.modeColor : "#3a4356";
+  bar.style.background = D.running ? D.modeColor : "var(--bar-idle)";
   q(".lab-prog").textContent = D.running ? Math.round(D.progPct) + "%" : "—";
   q(".lab-step").textContent = D.running ? "step " + Math.round(D.stepPct) + "%" : "ready";
   q(".v-elapsed").textContent = D.running ? D.elapsed : "—";
@@ -583,12 +589,35 @@ function uploadOta(root) {
 // Bootstrap
 // ─────────────────────────────
 
-const THEME_BG = "#0e1117";
+const THEME_BG = "#0e1117";        // dark — keep in sync with the CSS palette
+const THEME_BG_LIGHT = "#f2f4f8";  // light
+
+function applyChromeTheme() {
+  // page + mobile browser chrome follow the OS scheme, like the HA card
+  const light = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches;
+  const bg = light ? THEME_BG_LIGHT : THEME_BG;
+  document.documentElement.style.background = bg;
+  if (document.body) document.body.style.background = bg;
+  const meta = document.querySelector("meta[name=theme-color]");
+  if (meta) meta.content = bg;
+}
 
 const CSS_TEXT = `
 :host{display:block;background:var(--bg);min-height:100vh;
   --bg:#0e1117;--card:#161b26;--card2:#1c2333;--line:#232c40;
-  --tx:#e6eaf2;--mut:#8b93a5;--acc:#4a9eff;--red:#ef4444;--ok:#22c55e}
+  --tx:#e6eaf2;--mut:#8b93a5;--acc:#4a9eff;--red:#ef4444;--ok:#22c55e;
+  --acc-soft:#12233f;--ic-bg:#12233f;--ic-fg:#4a9eff;
+  --stop-bg:#3f1d24;--stop-bd:#7f1d1d;--stop-fg:#fca5a5;
+  --warn-bg:#2a1c10;--warn-bd:#78350f;--warn-fg:#f59e0b;
+  --bar-idle:#3a4356}
+@media (prefers-color-scheme: light){
+  :host{--bg:#f2f4f8;--card:#ffffff;--card2:#eef2f7;--line:#dbe2ec;
+    --tx:#18202e;--mut:#5c6575;--acc:#1e88fe;--red:#dc2626;--ok:#16a34a;
+    --acc-soft:#cfe4ff;--ic-bg:#dbeafe;--ic-fg:#1e88fe;
+    --stop-bg:#fee2e2;--stop-bd:#fca5a5;--stop-fg:#b91c1c;
+    --warn-bg:#fef3c7;--warn-bd:#f59e0b;--warn-fg:#92400e;
+    --bar-idle:#cfd6e0}
+}
 *{box-sizing:border-box;margin:0}
 .app{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);
   color:var(--tx);min-height:100vh;max-width:760px;margin:0 auto;padding:14px 14px 90px;
@@ -619,15 +648,20 @@ const CSS_TEXT = `
 .step-chip{padding:1px 9px;border-radius:8px;background:color-mix(in srgb,var(--sc,#8b93a5) 18%,transparent);
   color:var(--sc,#8b93a5);font-size:13px}
 .bar{height:10px;border-radius:999px;background:var(--card2);overflow:hidden}
-.bar-fill{height:100%;border-radius:999px;background:#3a4356;transition:width 1s linear,background 1s}
+.bar-fill{height:100%;border-radius:999px;background:var(--bar-idle);transition:width 1s linear,background 1s}
 .bar-lab{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin:5px 0 12px}
 .qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.qa{padding:12px 4px;border-radius:11px;border:1px solid var(--line);background:var(--card2);
-  color:var(--tx);font-size:12.5px;font-weight:600;line-height:1.25;cursor:pointer;
-  min-width:0;overflow-wrap:break-word}
+.qa{padding:10px 4px;border-radius:12px;border:1px solid var(--line);background:var(--card2);
+  color:var(--tx);cursor:pointer;min-width:0;
+  display:flex;flex-direction:column;align-items:center;gap:6px}
+.qa-ic{width:42px;height:42px;border-radius:13px;background:var(--ic-bg);color:var(--ic-fg);
+  font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center}
+.qa-t{font-size:11.5px;font-weight:600;line-height:1.25;text-align:center;overflow-wrap:break-word}
 .qa:hover:not(:disabled){border-color:var(--acc)}
-.qa.stop{background:#3f1d24;border-color:#7f1d1d;color:#fca5a5;font-weight:800}
-.qa.stop:hover{background:#7f1d1d;color:#fff}
+.qa.stop{background:var(--stop-bg);border-color:var(--stop-bd)}
+.qa.stop .qa-ic{background:transparent;color:var(--stop-fg);font-size:22px}
+.qa.stop .qa-t{color:var(--stop-fg);font-weight:800}
+.qa.stop:hover{filter:brightness(1.15)}
 .qa.locked{opacity:.35;cursor:not-allowed}
 .prog{display:grid;grid-template-columns:70px 1fr auto;gap:6px 10px;align-items:center;padding:8px 0;
   border-bottom:1px solid var(--line)}
@@ -655,17 +689,17 @@ const CSS_TEXT = `
 .chips{display:flex;gap:6px}
 .chip{padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card2);
   color:var(--mut);font-size:12px;font-weight:700;cursor:pointer}
-.chip.on{background:#12233f;border-color:var(--acc);color:var(--acc)}
+.chip.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
 .chip:disabled{opacity:.35;cursor:not-allowed}
 details.adv>summary{display:flex;align-items:baseline;gap:10px;cursor:pointer;list-style:none}
 details.adv>summary::-webkit-details-marker{display:none}
 details.adv>summary::before{content:"▸";color:var(--mut);transition:.15s}
 details.adv[open]>summary::before{transform:rotate(90deg)}
-.warn{font-size:11px;color:#f59e0b;background:#2a1c10;border:1px solid #78350f;border-radius:8px;
+.warn{font-size:11px;color:var(--warn-fg);background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:8px;
   padding:7px 10px;margin-bottom:8px}
 .toggle{width:44px;height:24px;border-radius:999px;background:var(--card2);border:1px solid var(--line);
   position:relative;cursor:pointer;transition:.2s}
-.toggle.on{background:#12233f;border-color:var(--acc)}
+.toggle.on{background:var(--acc-soft);border-color:var(--acc)}
 .toggle .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
   background:var(--mut);transition:.2s}
 .toggle.on .knob{left:22px;background:var(--acc)}
@@ -676,7 +710,7 @@ details.adv[open]>summary::before{transform:rotate(90deg)}
 .ota-status{font-size:12px;color:var(--mut);margin-top:8px;min-height:16px}
 .btn{padding:9px 16px;border-radius:9px;border:1px solid var(--line);background:var(--card2);
   color:var(--tx);font-size:12.5px;font-weight:700;cursor:pointer}
-.btn.primary{background:#12233f;border-color:var(--acc);color:var(--acc)}
+.btn.primary{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
 .btn.stop{background:#7f1d1d;border-color:#b91c1c;color:#fff;font-weight:800}
 .btn.sm{padding:6px 12px;font-size:11.5px}
 .log-bar{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-bottom:8px;
@@ -704,9 +738,12 @@ class WasherApp extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    // dark theme beyond the card: page background + mobile chrome
-    document.documentElement.style.background = THEME_BG;
-    if (document.body) document.body.style.background = THEME_BG;
+    // page background + mobile browser chrome follow the OS light/dark scheme
+    applyChromeTheme();
+    if (window.matchMedia) {
+      try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", applyChromeTheme); }
+      catch (_) { /* older browsers: theme fixed at load */ }
+    }
     // ESPHome's built-in shell omits the viewport meta — without it phones
     // render at ~980px virtual width and the layout stops being responsive
     if (document.head && !document.querySelector("meta[name=viewport]")) {
@@ -718,9 +755,9 @@ class WasherApp extends HTMLElement {
     if (document.head && !document.querySelector("meta[name=theme-color]")) {
       const meta = document.createElement("meta");
       meta.name = "theme-color";
-      meta.content = THEME_BG;
       document.head.appendChild(meta);
     }
+    applyChromeTheme();
     render();
     connectEvents();
   }

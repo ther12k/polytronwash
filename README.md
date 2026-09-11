@@ -28,14 +28,16 @@ SSE pushing state and logs live.
 
 - **Cycle Status** — program + step chips, whole-program progress bar,
   elapsed/remaining, free heap, WiFi signal.
-- **Quick Actions** — start wash/spin/drain/fill, **Rinse** / **Rinse No
-  Drain**, or a saved program. Everything except **STOP ALL** locks while
-  a cycle runs, and a sticky STOP bar follows you down the page.
+- **Quick Actions** — icon tiles (matching the HA card) for
+  wash/spin/drain/fill, **Rinse** / **Rinse No Drain**, and saved
+  programs. Everything except **STOP ALL** locks while a cycle runs, and
+  a sticky STOP bar follows you down the page.
 - **Program Sequences** — the three persistent `NAME:seconds` slots with
   live validation and a computed total (SPIN steps include the
   drain-prep + coast window, read live from Spin Drain Seconds).
 - **Timing & Presets** — steppers and preset chips for every
-  runtime-tunable number (incl. Spin Drain Seconds, Rinse Minutes).
+  runtime-tunable number (incl. Spin Drain Seconds, Rinse Drain Seconds,
+  Rinse Minutes).
 - **Manual Relays** (collapsed) — direct relay control for testing;
   firmware interlocks still apply.
 - **OTA Update + Debug Log** (log collapsed) — flash a firmware `.bin`
@@ -43,10 +45,12 @@ SSE pushing state and logs live.
 
 Responsive: two-column grid on desktop, single column with a 2×2
 quick-action grid on phones (`www.js` injects its own viewport meta —
-ESPHome's stock shell omits one). No auth by default (trusted local
-WiFi); a digest-auth block is commented in the yaml if you ever want
-it. `ui/mock-server.py` fakes the device API so the UI can be exercised
-offline.
+ESPHome's stock shell omits one). **Theme follows your device
+automatically** — light or dark via the OS setting, like the HA card;
+the mobile browser chrome (status-bar color) matches too. No auth by
+default (trusted local WiFi); a digest-auth block is commented in the
+yaml if you ever want it. `ui/mock-server.py` fakes the device API so
+the UI can be exercised offline.
 
 > **Router down?** About a minute after losing the configured AP the
 > ESP32 starts its own hotspot (**Polytron Wash Setup**) and serves the
