@@ -1,11 +1,5 @@
 title: Polytron Washer
 views:
-  - title: Polytron App
-    type: panel
-    cards:
-      - type: custom:polytron-washer-card
-        title: Polytron Washing Machine
-        subtitle: Smart Controller
   - title: Home
     type: sections
     max_columns: 2
@@ -125,6 +119,26 @@ views:
               action: perform-action
               perform_action: button.press
               target: {entity_id: button.polytron_washing_machine_stop_all}
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: button.ruang_cuci_polytron_washing_machine_start_rinse
+                name: Rinse
+                icon: mdi:water
+                color: blue
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse}
+              - type: tile
+                entity: button.ruang_cuci_polytron_washing_machine_start_rinse_no_drain
+                name: Rinse No Drain
+                icon: mdi:water-outline
+                color: blue
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse_no_drain}
           - type: heading
             heading: Recent Activity
             heading_style: title
@@ -245,6 +259,12 @@ views:
                 name: Drain Minutes
               - entity: number.polytron_washing_machine_fill_minutes
                 name: Fill Minutes
+              - entity: number.ruang_cuci_polytron_washing_machine_rinse_minutes
+                name: Rinse Minutes
+              - entity: number.ruang_cuci_polytron_washing_machine_spin_drain_seconds
+                name: Spin Drain Seconds
+              - entity: number.ruang_cuci_polytron_washing_machine_rinse_drain_seconds
+                name: Rinse Drain Seconds
               - entity: number.polytron_washing_machine_wash_pulse_seconds
                 name: Wash Pulse Seconds
               - entity: number.polytron_washing_machine_wash_dead_time_seconds
@@ -288,6 +308,26 @@ views:
                   action: perform-action
                   perform_action: button.press
                   target: {entity_id: button.polytron_washing_machine_start_drain}
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: button.ruang_cuci_polytron_washing_machine_start_rinse
+                name: Rinse
+                icon: mdi:water
+                color: blue
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse}
+              - type: tile
+                entity: button.ruang_cuci_polytron_washing_machine_start_rinse_no_drain
+                name: Rinse No Drain
+                icon: mdi:water-outline
+                color: blue
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse_no_drain}
 
   - title: Logs
     type: sections
@@ -305,6 +345,16 @@ views:
           - type: tile
             entity: binary_sensor.polytron_washing_machine_cycle_running
             name: Running
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: sensor.ruang_cuci_polytron_washing_machine_free_heap
+                name: Free Heap
+                icon: mdi:memory
+              - type: tile
+                entity: sensor.ruang_cuci_polytron_washing_machine_wifi_signal
+                name: WiFi Signal
+                icon: mdi:wifi
           - type: heading
             heading: Activity Log
             heading_style: title

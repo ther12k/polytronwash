@@ -197,8 +197,11 @@ Install: serve from `/config/www/polytron/` and register in
   [`cozylife_local`](https://github.com/soulripper13/cozylife_local)
   community integration (fully local); swap the entity id in the
   automation for any other plug.
-- `ha/polytron_dash.yaml` — YAML-mode dashboard alternative: same ring /
-  mode colors / locking rules in pure Lovelace YAML.
+- `ha/polytron_dash.yaml` — YAML-mode dashboard: pure HA-native views
+  (**Home / Programs / Controls / Logs**) built from tiles, gauges and
+  logbooks — status ring-free but fully functional, including all rinse
+  buttons and the new drain-timing entities. Navigation is HA's own tab
+  bar; the custom card above is optional and not used by this dashboard.
 
 ## Getting started
 
