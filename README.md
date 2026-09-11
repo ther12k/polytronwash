@@ -133,9 +133,13 @@ taps or one voice command.
 
 ## Home Assistant setup (`ha/`)
 
-- `ha/scripts.yaml` — voice presets (`Wash 20 Minutes`, `Spin 10 Minutes`,
-  `Drain Now`, …). Merge into your HA `scripts.yaml`; expose to Google
-  Assistant (Nabu Casa or manual linking) → *"Hey Google, activate Wash 20 Minutes"*.
+- `ha/scripts.yaml` — voice presets in **Bahasa Indonesia**
+  (`Cuci`, `Cuci 20 Menit`, `Bilas`, `Keringkan 10 Menit`, `Buang Air`,
+  `Isi Air`, `Stop Mesin Cuci`, …; English names kept as aliases).
+  Expose the scripts to Google Assistant and add Bahasa Indonesia in
+  Google Assistant's language settings →
+  *"Ok Google, aktifkan Cuci 20 Menit"*, *"aktifkan Bilas"*,
+  *"aktifkan Keringkan"*.
 - `ha/automations.yaml` — push/notification when a cycle finishes, and a
   **fill-pump follow** automation that mirrors the inlet valve onto an
   external pump smart-plug (works for every fill: Fill, Rinse, program

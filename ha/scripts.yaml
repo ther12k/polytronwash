@@ -1,8 +1,21 @@
-# Voice/dashboard presets for the Polytron washer.
-# Google exposes scripts as scenes -> "Hey Google, activate Wash 20 Minutes"
+# Voice/dashboard presets for the Polytron washer — Bahasa Indonesia.
+# Google Assistant exposes scripts as scenes:
+#   "Ok Google, aktifkan Cuci 20 Menit" / "aktifkan Bilas" / "aktifkan Keringkan"
+# Add Bahasa Indonesia in Google Assistant settings (Google Home app →
+# Settings → Google Assistant → Languages) for best recognition, and expose
+# these scripts in the Google Assistant integration once.
 
-wash_5:
-  alias: "Wash 5 Minutes"
+cuci:
+  alias: "Cuci"
+  aliases: ["Wash"]
+  icon: mdi:washing-machine
+  sequence:
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_wash}
+
+cuci_5:
+  alias: "Cuci 5 Menit"
+  aliases: ["Wash 5 Minutes"]
   icon: mdi:washing-machine
   sequence:
     - action: number.set_value
@@ -11,8 +24,9 @@ wash_5:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_wash}
 
-wash_10:
-  alias: "Wash 10 Minutes"
+cuci_10:
+  alias: "Cuci 10 Menit"
+  aliases: ["Wash 10 Minutes"]
   icon: mdi:washing-machine
   sequence:
     - action: number.set_value
@@ -21,8 +35,9 @@ wash_10:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_wash}
 
-wash_20:
-  alias: "Wash 20 Minutes"
+cuci_20:
+  alias: "Cuci 20 Menit"
+  aliases: ["Wash 20 Minutes"]
   icon: mdi:washing-machine
   sequence:
     - action: number.set_value
@@ -31,8 +46,9 @@ wash_20:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_wash}
 
-wash_30:
-  alias: "Wash 30 Minutes"
+cuci_30:
+  alias: "Cuci 30 Menit"
+  aliases: ["Wash 30 Minutes"]
   icon: mdi:washing-machine
   sequence:
     - action: number.set_value
@@ -41,8 +57,25 @@ wash_30:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_wash}
 
-spin_10:
-  alias: "Spin 10 Minutes"
+bilas:
+  alias: "Bilas"
+  aliases: ["Rinse Now"]
+  icon: mdi:water
+  sequence:
+    - action: button.press
+      target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse}
+
+kering:
+  alias: "Keringkan"
+  aliases: ["Spin"]
+  icon: mdi:rotate-right
+  sequence:
+    - action: button.press
+      target: {entity_id: button.polytron_washing_machine_start_spin}
+
+kering_10:
+  alias: "Keringkan 10 Menit"
+  aliases: ["Spin 10 Minutes"]
   icon: mdi:rotate-right
   sequence:
     - action: number.set_value
@@ -51,8 +84,9 @@ spin_10:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_spin}
 
-spin_20:
-  alias: "Spin 20 Minutes"
+kering_20:
+  alias: "Keringkan 20 Menit"
+  aliases: ["Spin 20 Minutes"]
   icon: mdi:rotate-right
   sequence:
     - action: number.set_value
@@ -61,8 +95,9 @@ spin_20:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_spin}
 
-spin_30:
-  alias: "Spin 30 Minutes"
+kering_30:
+  alias: "Keringkan 30 Menit"
+  aliases: ["Spin 30 Minutes"]
   icon: mdi:rotate-right
   sequence:
     - action: number.set_value
@@ -71,30 +106,26 @@ spin_30:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_spin}
 
-drain_now:
-  alias: "Drain Now"
+buang_air:
+  alias: "Buang Air"
+  aliases: ["Drain Now"]
   icon: mdi:water-pump
   sequence:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_drain}
 
-washer_stop:
-  alias: "Washer Stop"
-  icon: mdi:octagon
-  sequence:
-    - action: button.press
-      target: {entity_id: button.polytron_washing_machine_stop_all}
-
-fill_now:
-  alias: "Fill Water"
-  icon: mdi:water
+isi_air:
+  alias: "Isi Air"
+  aliases: ["Fill Water"]
+  icon: mdi:valve
   sequence:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_fill}
 
-rinse_now:
-  alias: "Rinse Now"
-  icon: mdi:water
+stop_mesin:
+  alias: "Stop Mesin Cuci"
+  aliases: ["Washer Stop"]
+  icon: mdi:stop-circle
   sequence:
     - action: button.press
-      target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse}
+      target: {entity_id: button.polytron_washing_machine_stop_all}
