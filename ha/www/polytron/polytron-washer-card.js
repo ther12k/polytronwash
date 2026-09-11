@@ -24,6 +24,7 @@ class PolytronWasherCard extends HTMLElement {
       start_spin: "button.polytron_washing_machine_start_spin",
       start_fill: "button.polytron_washing_machine_start_fill",
       start_rinse: "button.ruang_cuci_polytron_washing_machine_start_rinse",
+      start_rinse_nd: "button.ruang_cuci_polytron_washing_machine_start_rinse_no_drain",
       n_wash: "number.polytron_washing_machine_wash_minutes",
       n_spin: "number.polytron_washing_machine_spin_minutes",
       n_drain: "number.polytron_washing_machine_drain_minutes",
@@ -140,7 +141,7 @@ class PolytronWasherCard extends HTMLElement {
         <div class="h2">Quick Actions</div><div class="h3">Start specific functions or stop everything.</div>
         <div class="qarow">
           ${qa(C.start_wash,"▶","Start Wash", lock ? "b dis" : "b")}${qa(C.start_drain,"💧","Start Drain", lock ? "b dis" : "b")}${qa(C.start_spin,"🌀","Start Spin", lock ? "b dis" : "b")}
-          ${qa(C.start_fill,"🚿","Start Fill", lock ? "b dis" : "b")}${qa(C.start_rinse,"🫧","Rinse", lock ? "b dis" : "b")}${qa(C.stop,"■","Stop All","r")}
+          ${qa(C.start_fill,"🚿","Start Fill", lock ? "b dis" : "b")}${qa(C.start_rinse,"🫧","Rinse", lock ? "b dis" : "b")}${qa(C.start_rinse_nd,"🫧","Rinse No Drain", lock ? "b dis" : "b")}${qa(C.stop,"■","Stop All","r")}
         </div>
       </div>
       <div class="card">

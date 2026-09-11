@@ -65,6 +65,14 @@ bilas:
     - action: button.press
       target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse}
 
+bilas_tanpa_buang:
+  alias: "Bilas Tanpa Buang"
+  aliases: ["Rinse Without Drain"]
+  icon: mdi:water-outline
+  sequence:
+    - action: button.press
+      target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse_no_drain}
+
 kering:
   alias: "Keringkan"
   aliases: ["Spin"]

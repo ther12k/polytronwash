@@ -19,6 +19,7 @@ const ENTITIES = Object.freeze({
     drain: "Start Drain",
     fill: "Start Fill",
     rinse: "Start Rinse",
+    rinseND: "Start Rinse No Drain",
     stop: "STOP ALL",
     quick: "Run Quick",
     normal: "Run Normal",
@@ -268,6 +269,7 @@ function renderApp() {
       ${qa("Start Wash", "wash")}${qa("Start Spin", "spin")}
       ${qa("Start Drain", "drain")}${qa("Start Fill", "fill")}
       ${qa("Rinse", "rinse")}
+      ${qa("Rinse No Drain", "rinseND")}
       ${qa("STOP ALL", "stop", "stop")}
       ${qa("Run Quick", "quick")}${qa("Run Normal", "normal")}${qa("Run Custom", "custom")}
     </div>`, "c-actions");

@@ -79,7 +79,9 @@ flip the substitution if yours are active-HIGH.
 - **RINSE** — clean-water wash, no detergent, no spin: drain leftovers →
   refill → agitate `Rinse Minutes` (default 3) → drain again. One button
   press, voice command, or `rinse()` API action; uses the on-device
-  Drain/Fill/Rinse minute settings.
+  Drain/Fill/Rinse minute settings. A second variant, **Rinse No Drain**,
+  skips the leading drain for when the tub is already empty (after a
+  wash program or Keringkan).
 - **STOP ALL** — motors + inlet cut instantly; if a spin was running the
   drum coasts `stop_coast_seconds` before the clutch brake engages.
 
@@ -124,7 +126,7 @@ taps or one voice command.
 
 ## What Home Assistant sees
 
-- `button.*` — Start Wash/Spin/Drain/Fill/Rinse, Run Quick/Normal/Custom, STOP ALL
+- `button.*` — Start Wash/Spin/Drain/Fill/Rinse/Rinse No Drain, Run Quick/Normal/Custom, STOP ALL
 - `switch.*` — the four raw relays (manual/MCP control; interlocks still apply)
 - `number.*` — wash/spin/drain/fill/rinse minutes, spin drain seconds, wash pulse + dead time, spin coast seconds
 - `select.*` — wash preset, spin preset, spin direction (A/B)

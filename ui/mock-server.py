@@ -153,7 +153,8 @@ class Handler(BaseHTTPRequestHandler):
                 setst("binary_sensor/Cycle Running", "ON", True)
                 setst("text_sensor/Current Program", btn.upper(), btn.upper())
                 mode = {"Start Wash": "WASH", "Start Spin": "SPIN", "Start Drain": "DRAIN",
-                        "Start Fill": "FILL", "Start Rinse": "DRAIN"}.get(btn, "WASH")
+                        "Start Fill": "FILL", "Start Rinse": "DRAIN",
+                        "Start Rinse No Drain": "FILL"}.get(btn, "WASH")
                 setst("text_sensor/Cycle State", mode, mode)
         self.send_response(200)
         self.send_header("Content-Length", "0")

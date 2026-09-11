@@ -666,6 +666,27 @@ button:
             snprintf(b, sizeof(b), "DRAIN:%d, FILL:%d, WASH:%d, DRAIN:%d", d, f, r, d);
             return std::string(b);
 
+  # Same rinse but skips the leading drain — use when the tub is already
+  # empty (wash programs end drained, or after Keringkan).
+  - platform: template
+    name: "Start Rinse No Drain"
+    id: btn_start_rinse_nd
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 46
+    icon: mdi:water-outline
+    on_press:
+      - script.execute:
+          id: run_seq
+          name: "RINSE"
+          seq: !lambda |-
+            char b[96];
+            const int d = (int) (id(num_drain_min).state * 60);
+            const int f = (int) (id(num_fill_min).state * 60);
+            const int r = (int) (id(num_rinse_min).state * 60);
+            snprintf(b, sizeof(b), "FILL:%d, WASH:%d, DRAIN:%d", f, r, d);
+            return std::string(b);
+
 number:
   - platform: template
     name: "Wash Minutes"
