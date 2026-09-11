@@ -29,7 +29,7 @@ async def main():
     stamp("TEST 2/3  wash(8):    A 1.5s / dead 0.75s / B 1.5s / dead 0.75s ...")
     await call(cli.execute_service, svc["wash"], {"duration_s": 8})
     await asyncio.sleep(11)
-    stamp("TEST 3/3  spin(6):    IN1 drains 60s prep -> Motor A holds 6s -> coast 10s -> IN1 off")
+    stamp("TEST 3/3  spin(6):    IN1 drains Spin Drain Seconds (30s default) prep -> Motor A holds 6s -> coast 10s -> IN1 off")
     await call(cli.execute_service, svc["spin"], {"duration_s": 6})
     await asyncio.sleep(24)
     stamp("DONE - all loads off")

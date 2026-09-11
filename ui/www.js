@@ -36,6 +36,7 @@ const ENTITIES = Object.freeze({
     drainN: { name: "Drain Minutes", min: 1, max: 15, step: 1, dec: 0, unit: "min" },
     fill: { name: "Fill Minutes", min: 1, max: 10, step: 1, dec: 0, unit: "min" },
     rinseM: { name: "Rinse Minutes", min: 1, max: 15, step: 1, dec: 0, unit: "min" },
+    spinDrain: { name: "Spin Drain Seconds", min: 5, max: 300, step: 5, dec: 0, unit: "s" },
     pulse: { name: "Wash Pulse Seconds", min: 0.5, max: 10, step: 0.5, dec: 1, unit: "s" },
     dead: { name: "Wash Dead Time Seconds", min: 0.5, max: 5, step: 0.25, dec: 2, unit: "s" },
     coast: { name: "Stop Coast Seconds", min: 0, max: 60, step: 5, dec: 0, unit: "s" },
@@ -177,9 +178,10 @@ function validateProgram(steps) {
 }
 
 function programTotal(steps) {
-  // Nominal program time; SPIN carries a fixed 70 s drain-prep(60)+coast(10)
-  // window (spin_extra_s in polytron-v3.yaml — keep in sync).
-  return steps.reduce((t, s) => t + s.sec + (s.op === "SPIN" ? 70 : 0), 0);
+  // Nominal program time; each SPIN adds the live Spin Drain Seconds
+  // (num_spin_drain_s) + 10 s coast (spin_coast_s in polytron-v3.yaml).
+  const drain = parseFloat((store.states[`number/${ENTITIES.number.spinDrain.name}`] || {}).state) || 0;
+  return steps.reduce((t, s) => t + s.sec + (s.op === "SPIN" ? drain + 10 : 0), 0);
 }
 
 const fmtSec = (s) => {
@@ -320,7 +322,8 @@ function renderApp() {
     chips(ENTITIES.select.spinMotor, "Spin motor") +
     stepper(N.pulse, "Wash pulse", "A/B run") +
     stepper(N.dead, "Wash dead time", "gap") +
-    stepper(N.coast, "Stop coast", "brake delay"), "c-timing");
+    stepper(N.coast, "Stop coast", "brake delay") +
+    stepper(N.spinDrain, "Spin drain", "before motor"), "c-timing");
 
   const relay = (key, name) => {
     const on = (store.states[`switch/${name}`] || {}).state === "ON";

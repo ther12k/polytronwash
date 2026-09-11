@@ -32,8 +32,8 @@ SSE pushing state and logs live.
   Everything except **STOP ALL** locks while a cycle runs, and a sticky
   STOP bar follows you down the page.
 - **Program Sequences** — the three persistent `NAME:seconds` slots with
-  live validation and a computed total (SPIN steps include the 70 s
-  drain-prep + coast window).
+  live validation and a computed total (SPIN steps include the
+  drain-prep + coast window, read live from Spin Drain Seconds).
 - **Timing & Presets** — steppers and preset chips for every
   runtime-tunable number.
 - **Manual Relays** (collapsed) — direct relay control for testing;
@@ -70,8 +70,9 @@ flip the substitution if yours are active-HIGH.
 - **WASH** — the motor alternates A/B in pulses (`wash_on_ms` energized,
   `wash_dead_ms` dead time between directions, both runtime-tunable
   0.5–10 s / 0.5–5 s from HA or the web UI).
-- **SPIN** — drain ON and pumping for a full 60 s (`spin_prep_s`) before
-  the motor starts, so the water is gone and the clutch engages dry →
+- **SPIN** — drain ON and pumping for `Spin Drain Seconds` (default 30 s,
+  runtime-tunable) before the motor starts, so the water is gone and the
+  clutch engages dry →
   one direction continuously (A or B — selectable in config via the
   `spin_motor` select, no rewiring) → coast (`spin_coast_s`) → drain OFF.
 - **DRAIN / FILL** — single solenoid for the configured duration.
@@ -125,7 +126,7 @@ taps or one voice command.
 
 - `button.*` — Start Wash/Spin/Drain/Fill/Rinse, Run Quick/Normal/Custom, STOP ALL
 - `switch.*` — the four raw relays (manual/MCP control; interlocks still apply)
-- `number.*` — wash/spin/drain/fill/rinse minutes, wash pulse + dead time, spin coast seconds
+- `number.*` — wash/spin/drain/fill/rinse minutes, spin drain seconds, wash pulse + dead time, spin coast seconds
 - `select.*` — wash preset, spin preset, spin direction (A/B)
 - `text.*` — the three editable program slots
 - `sensor.*` — cycle state, step + whole-program progress %, elapsed/remaining, free heap, WiFi signal (dBm)

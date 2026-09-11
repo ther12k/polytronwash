@@ -29,6 +29,7 @@ class PolytronWasherCard extends HTMLElement {
       n_drain: "number.polytron_washing_machine_drain_minutes",
       n_fill: "number.polytron_washing_machine_fill_minutes",
       n_rinse: "number.ruang_cuci_polytron_washing_machine_rinse_minutes",
+      n_spindr: "number.ruang_cuci_polytron_washing_machine_spin_drain_seconds",
       sel_wash: "select.polytron_washing_machine_wash_preset",
       sel_spin: "select.polytron_washing_machine_spin_preset",
       t_quick: "text.polytron_washing_machine_program_quick",
@@ -151,6 +152,7 @@ class PolytronWasherCard extends HTMLElement {
         ${step(C.n_wash, "Wash", "💧", 1, 60, presets(C.sel_wash, ["5","10","20","30"]))}
         ${step(C.n_drain, "Drain", "🌊", 1, 15, null)}
         ${step(C.n_spin, "Spin", "🌀", 1, 15, presets(C.sel_spin, ["10","20","30"]))}
+        ${step(C.n_spindr, "Spin Drain (s, before motor)", "🌊", 5, 300, null, 5)}
         ${step(C.n_rinse, "Rinse (agitate in clean water)", "🫧", 1, 15, null)}
         ${step(C.n_wash_on, "Wash Pulse (A/B run time)", "⚙", 0.5, 10, null, 0.5)}
         ${step(C.n_wash_dead, "Wash Dead Time (gap)", "⏸", 0.5, 5, null, 0.25)}
