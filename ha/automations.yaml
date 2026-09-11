@@ -12,3 +12,36 @@
         message: >-
           Program '{{ states("sensor.polytron_washing_machine_current_program") }}'
           has ended. All loads are off.
+
+# Fill pump follows the washer's inlet valve. Works for every fill:
+# Start Fill, Rinse, and FILL: steps inside programs.
+# ONE-TIME SETUP: replace switch.REPLACE_ME_PUMP_PLUG below with your pump
+# plug's entity id (Settings > Devices after adding the plug to Home
+# Assistant — most "Google Home" plugs are Tuya/Smart Life behind the
+# scenes; add the Tuya integration with the same account). Until then
+# this automation only logs.
+- id: washer_fill_pump_follow
+  alias: "Washer: fill pump follows inlet valve"
+  trigger:
+    - platform: state
+      entity_id: switch.polytron_washing_machine_water_inlet
+      to: "on"
+      id: pump_on
+    - platform: state
+      entity_id: switch.polytron_washing_machine_water_inlet
+      to: ["off", "unavailable"]
+      id: pump_off
+  action:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: pump_on
+          sequence:
+            - action: switch.turn_on
+              target:
+                entity_id: switch.REPLACE_ME_PUMP_PLUG
+      default:
+        - action: switch.turn_off
+          target:
+            entity_id: switch.REPLACE_ME_PUMP_PLUG
+  mode: restart

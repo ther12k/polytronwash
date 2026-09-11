@@ -75,6 +75,10 @@ flip the substitution if yours are active-HIGH.
   one direction continuously (A or B — selectable in config via the
   `spin_motor` select, no rewiring) → coast (`spin_coast_s`) → drain OFF.
 - **DRAIN / FILL** — single solenoid for the configured duration.
+- **RINSE** — clean-water wash, no detergent, no spin: drain leftovers →
+  refill → agitate `Rinse Minutes` (default 3) → drain again. One button
+  press, voice command, or `rinse()` API action; uses the on-device
+  Drain/Fill/Rinse minute settings.
 - **STOP ALL** — motors + inlet cut instantly; if a spin was running the
   drum coasts `stop_coast_seconds` before the clutch brake engages.
 
@@ -102,7 +106,7 @@ High-level actions registered on the ESPHome API (usable from HA scripts,
 automations, voice, or MCP agents):
 
 ```
-wash(duration_s)   drain(duration_s)   spin(duration_s)   fill(duration_s)   stop_all()
+wash(duration_s)   drain(duration_s)   spin(duration_s)   fill(duration_s)   rinse()   stop_all()
 ```
 
 Programs are **data on the device** — three persistent text slots edited
@@ -119,9 +123,9 @@ taps or one voice command.
 
 ## What Home Assistant sees
 
-- `button.*` — Start Wash/Spin/Drain/Fill, Run Quick/Normal/Custom, STOP ALL
+- `button.*` — Start Wash/Spin/Drain/Fill/Rinse, Run Quick/Normal/Custom, STOP ALL
 - `switch.*` — the four raw relays (manual/MCP control; interlocks still apply)
-- `number.*` — wash/spin/drain/fill minutes, wash pulse + dead time, spin coast seconds
+- `number.*` — wash/spin/drain/fill/rinse minutes, wash pulse + dead time, spin coast seconds
 - `select.*` — wash preset, spin preset, spin direction (A/B)
 - `text.*` — the three editable program slots
 - `sensor.*` — cycle state, step + whole-program progress %, elapsed/remaining, free heap, WiFi signal (dBm)
@@ -132,7 +136,12 @@ taps or one voice command.
 - `ha/scripts.yaml` — voice presets (`Wash 20 Minutes`, `Spin 10 Minutes`,
   `Drain Now`, …). Merge into your HA `scripts.yaml`; expose to Google
   Assistant (Nabu Casa or manual linking) → *"Hey Google, activate Wash 20 Minutes"*.
-- `ha/automations.yaml` — push/notification when a cycle finishes.
+- `ha/automations.yaml` — push/notification when a cycle finishes, and a
+  **fill-pump follow** automation that mirrors the inlet valve onto an
+  external pump smart-plug (works for every fill: Fill, Rinse, program
+  steps). Point it at your plug by replacing `switch.REPLACE_ME_PUMP_PLUG`;
+  a Google-Home plug usually pairs with Home Assistant via the same
+  vendor cloud (Tuya/Smart Life and friends).
 - `ha/polytron_dash.yaml` — YAML-mode dashboard: circular progress ring,
   mode-colored state (WASH blue / DRAIN teal / SPIN purple / FILL cyan),
   buttons locked while a cycle runs (except STOP ALL), program editor.

@@ -91,3 +91,10 @@ fill_now:
   sequence:
     - action: button.press
       target: {entity_id: button.polytron_washing_machine_start_fill}
+
+rinse_now:
+  alias: "Rinse Now"
+  icon: mdi:water
+  sequence:
+    - action: button.press
+      target: {entity_id: button.ruang_cuci_polytron_washing_machine_start_rinse}

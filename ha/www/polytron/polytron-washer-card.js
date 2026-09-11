@@ -23,10 +23,12 @@ class PolytronWasherCard extends HTMLElement {
       start_drain: "button.polytron_washing_machine_start_drain",
       start_spin: "button.polytron_washing_machine_start_spin",
       start_fill: "button.polytron_washing_machine_start_fill",
+      start_rinse: "button.ruang_cuci_polytron_washing_machine_start_rinse",
       n_wash: "number.polytron_washing_machine_wash_minutes",
       n_spin: "number.polytron_washing_machine_spin_minutes",
       n_drain: "number.polytron_washing_machine_drain_minutes",
       n_fill: "number.polytron_washing_machine_fill_minutes",
+      n_rinse: "number.ruang_cuci_polytron_washing_machine_rinse_minutes",
       sel_wash: "select.polytron_washing_machine_wash_preset",
       sel_spin: "select.polytron_washing_machine_spin_preset",
       t_quick: "text.polytron_washing_machine_program_quick",
@@ -137,7 +139,7 @@ class PolytronWasherCard extends HTMLElement {
         <div class="h2">Quick Actions</div><div class="h3">Start specific functions or stop everything.</div>
         <div class="qarow">
           ${qa(C.start_wash,"▶","Start Wash", lock ? "b dis" : "b")}${qa(C.start_drain,"💧","Start Drain", lock ? "b dis" : "b")}${qa(C.start_spin,"🌀","Start Spin", lock ? "b dis" : "b")}
-          ${qa(C.start_fill,"🚿","Start Fill", lock ? "b dis" : "b")}${qa(C.stop,"■","Stop All","r")}
+          ${qa(C.start_fill,"🚿","Start Fill", lock ? "b dis" : "b")}${qa(C.start_rinse,"🫧","Rinse", lock ? "b dis" : "b")}${qa(C.stop,"■","Stop All","r")}
         </div>
       </div>
       <div class="card">
@@ -149,6 +151,7 @@ class PolytronWasherCard extends HTMLElement {
         ${step(C.n_wash, "Wash", "💧", 1, 60, presets(C.sel_wash, ["5","10","20","30"]))}
         ${step(C.n_drain, "Drain", "🌊", 1, 15, null)}
         ${step(C.n_spin, "Spin", "🌀", 1, 15, presets(C.sel_spin, ["10","20","30"]))}
+        ${step(C.n_rinse, "Rinse (agitate in clean water)", "🫧", 1, 15, null)}
         ${step(C.n_wash_on, "Wash Pulse (A/B run time)", "⚙", 0.5, 10, null, 0.5)}
         ${step(C.n_wash_dead, "Wash Dead Time (gap)", "⏸", 0.5, 5, null, 0.25)}
       </div>`;

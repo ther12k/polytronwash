@@ -18,6 +18,7 @@ const ENTITIES = Object.freeze({
     spin: "Start Spin",
     drain: "Start Drain",
     fill: "Start Fill",
+    rinse: "Start Rinse",
     stop: "STOP ALL",
     quick: "Run Quick",
     normal: "Run Normal",
@@ -34,6 +35,7 @@ const ENTITIES = Object.freeze({
     spin: { name: "Spin Minutes", min: 1, max: 30, step: 1, dec: 0, unit: "min" },
     drainN: { name: "Drain Minutes", min: 1, max: 15, step: 1, dec: 0, unit: "min" },
     fill: { name: "Fill Minutes", min: 1, max: 10, step: 1, dec: 0, unit: "min" },
+    rinseM: { name: "Rinse Minutes", min: 1, max: 15, step: 1, dec: 0, unit: "min" },
     pulse: { name: "Wash Pulse Seconds", min: 0.5, max: 10, step: 0.5, dec: 1, unit: "s" },
     dead: { name: "Wash Dead Time Seconds", min: 0.5, max: 5, step: 0.25, dec: 2, unit: "s" },
     coast: { name: "Stop Coast Seconds", min: 0, max: 60, step: 5, dec: 0, unit: "s" },
@@ -263,6 +265,7 @@ function renderApp() {
     <div class="qa-grid">
       ${qa("Start Wash", "wash")}${qa("Start Spin", "spin")}
       ${qa("Start Drain", "drain")}${qa("Start Fill", "fill")}
+      ${qa("Rinse", "rinse")}
       ${qa("STOP ALL", "stop", "stop")}
       ${qa("Run Quick", "quick")}${qa("Run Normal", "normal")}${qa("Run Custom", "custom")}
     </div>`, "c-actions");
@@ -311,6 +314,7 @@ function renderApp() {
     stepper(N.spin, "Spin") +
     stepper(N.drainN, "Drain") +
     stepper(N.fill, "Fill") +
+    stepper(N.rinseM, "Rinse", "agitate in clean water") +
     chips(ENTITIES.select.washPreset, "Wash preset") +
     chips(ENTITIES.select.spinPreset, "Spin preset") +
     chips(ENTITIES.select.spinMotor, "Spin motor") +

@@ -111,6 +111,11 @@ api:
             id: start_cycle
             cycle: "fill"
             duration_s: !lambda 'return duration_s;'
+    # rinse() takes no arguments — it uses the on-device Drain/Fill/Rinse
+    # minute settings, so HA scripts and voice don't need to compute it
+    - action: rinse
+      then:
+        - button.press: btn_start_rinse
     - action: stop_all
       then:
         - script.execute: stop_all
@@ -640,6 +645,27 @@ button:
           cycle: "fill"
           duration_s: !lambda 'return (int) (id(num_fill_min).state * 60);'
 
+  # Rinse = clean-water wash, no detergent: drain leftovers, refill,
+  # agitate Rinse Minutes, drain. No spin (rinse-only by design).
+  - platform: template
+    name: "Start Rinse"
+    id: btn_start_rinse
+    web_server:
+      sorting_group_id: grp_start
+      sorting_weight: 45
+    icon: mdi:water
+    on_press:
+      - script.execute:
+          id: run_seq
+          name: "RINSE"
+          seq: !lambda |-
+            char b[128];
+            const int d = (int) (id(num_drain_min).state * 60);
+            const int f = (int) (id(num_fill_min).state * 60);
+            const int r = (int) (id(num_rinse_min).state * 60);
+            snprintf(b, sizeof(b), "DRAIN:%d, FILL:%d, WASH:%d, DRAIN:%d", d, f, r, d);
+            return std::string(b);
+
 number:
   - platform: template
     name: "Wash Minutes"
@@ -700,6 +726,21 @@ number:
     initial_value: 5
     mode: box
     icon: mdi:valve
+
+  - platform: template
+    name: "Rinse Minutes"
+    web_server:
+      sorting_group_id: grp_timing
+      sorting_weight: 45
+    id: num_rinse_min
+    optimistic: true
+    restore_value: true
+    min_value: 1
+    max_value: 15
+    step: 1
+    initial_value: 3
+    mode: box
+    icon: mdi:water
 
   - platform: template
     name: "Stop Coast Seconds"

@@ -34,6 +34,7 @@ STATE = {
     "number/Spin Minutes": {"id": "number/Spin Minutes", "state": "10", "value": 10},
     "number/Drain Minutes": {"id": "number/Drain Minutes", "state": "2", "value": 2},
     "number/Fill Minutes": {"id": "number/Fill Minutes", "state": "5", "value": 5},
+    "number/Rinse Minutes": {"id": "number/Rinse Minutes", "state": "3", "value": 3},
     "number/Wash Pulse Seconds": {"id": "number/Wash Pulse Seconds", "state": "5", "value": 5},
     "number/Wash Dead Time Seconds": {"id": "number/Wash Dead Time Seconds", "state": "2", "value": 2},
     "number/Stop Coast Seconds": {"id": "number/Stop Coast Seconds", "state": "30", "value": 30},
@@ -151,7 +152,7 @@ class Handler(BaseHTTPRequestHandler):
                 setst("binary_sensor/Cycle Running", "ON", True)
                 setst("text_sensor/Current Program", btn.upper(), btn.upper())
                 mode = {"Start Wash": "WASH", "Start Spin": "SPIN", "Start Drain": "DRAIN",
-                        "Start Fill": "FILL"}.get(btn, "WASH")
+                        "Start Fill": "FILL", "Start Rinse": "DRAIN"}.get(btn, "WASH")
                 setst("text_sensor/Cycle State", mode, mode)
         self.send_response(200)
         self.send_header("Content-Length", "0")
