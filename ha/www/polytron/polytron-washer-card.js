@@ -243,7 +243,7 @@ class PolytronWasherCard extends HTMLElement {
       .tg.on{background:#1e88fe}.kn{position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s}
       .tg.on .kn{left:20px}
       .qarow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.qa{text-align:center;cursor:pointer}
-      @media(max-width:480px){.qarow{grid-template-columns:repeat(2,1fr)}.qarow .qa.r{grid-column:span 2}}
+      .qarow .qa.r{grid-column:span 2}
       .qa-c{width:52px;height:52px;border-radius:16px;background:#dbeafe;color:#1e88fe;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 4px}
       .qa.r .qa-c{background:#fee2e2;color:#dc2626}.qa-t{font-size:11px;font-weight:600}
       .step{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6}

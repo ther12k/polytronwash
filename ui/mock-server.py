@@ -36,6 +36,7 @@ STATE = {
     "number/Fill Minutes": {"id": "number/Fill Minutes", "state": "5", "value": 5},
     "number/Rinse Minutes": {"id": "number/Rinse Minutes", "state": "3", "value": 3},
     "number/Spin Drain Seconds": {"id": "number/Spin Drain Seconds", "state": "30", "value": 30},
+    "number/Rinse Drain Seconds": {"id": "number/Rinse Drain Seconds", "state": "45", "value": 45},
     "number/Wash Pulse Seconds": {"id": "number/Wash Pulse Seconds", "state": "5", "value": 5},
     "number/Wash Dead Time Seconds": {"id": "number/Wash Dead Time Seconds", "state": "2", "value": 2},
     "number/Stop Coast Seconds": {"id": "number/Stop Coast Seconds", "state": "30", "value": 30},
